@@ -77,11 +77,16 @@ export async function createMonetaryDonation(
       })
       .returning({ id: donations.id, createdAt: donations.createdAt });
 
-    // Update product current amount
+    // Update product current amount and mark as fulfilled if target is reached
+    const newAmount = product.currentAmount + validated.amount;
+    const nowFulfilled =
+      product.targetAmount != null && newAmount >= product.targetAmount;
+
     await db
       .update(products)
       .set({
-        currentAmount: product.currentAmount + validated.amount,
+        currentAmount: newAmount,
+        isFulfilled: nowFulfilled ? true : product.isFulfilled,
         updatedAt: new Date(),
       })
       .where(eq(products.id, validated.productId));
@@ -471,11 +476,21 @@ export async function createFundTransfer(
         throw new Error('INSUFFICIENT_BALANCE');
       }
 
-      // Update target product
+      // Update target product and mark as fulfilled if target is reached
+      const targetProduct = transferProducts.find(
+        (p) => p.id === validated.targetProductId
+      );
+      const targetNewAmount =
+        (targetProduct?.currentAmount ?? 0) + validated.amount;
+      const targetNowFulfilled =
+        targetProduct?.targetAmount != null &&
+        targetNewAmount >= targetProduct.targetAmount;
+
       const targetUpdate = await tx
         .update(products)
         .set({
           currentAmount: sql`${products.currentAmount} + ${validated.amount}`,
+          isFulfilled: targetNowFulfilled ? true : undefined,
           updatedAt: new Date(),
         })
         .where(eq(products.id, validated.targetProductId))
