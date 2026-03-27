@@ -19,7 +19,7 @@ export async function DonationsTableServer({
   // Resolve receipt URLs for all donations
   const preparedRows: PreparedDonationRow[] = data.donations.map((row) => ({
     ...row,
-    receiptUrl: row.receiptPath ? getPublicUrl('donation-receipts', row.receiptPath) : undefined,
+    receiptUrl: row.receiptPath ? getPublicUrl('receipts', row.receiptPath) : undefined,
   }));
 
   return (
