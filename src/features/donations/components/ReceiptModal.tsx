@@ -28,7 +28,8 @@ export function ReceiptModal({
   }
 
   const receiptUrl = donation.receiptUrl;
-  const fileExtension = receiptUrl.split('.').pop()?.toLowerCase() || '';
+  const urlPathname = receiptUrl.split('?')[0];
+  const fileExtension = urlPathname.split('.').pop()?.toLowerCase() || '';
   const isImage = ['jpg', 'jpeg', 'png', 'webp'].includes(fileExtension);
   const isPdf = fileExtension === 'pdf';
 
