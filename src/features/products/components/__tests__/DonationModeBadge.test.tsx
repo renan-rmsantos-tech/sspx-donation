@@ -21,9 +21,9 @@ describe('DonationModeBadge', () => {
     expect(span).toHaveClass('text-blue-700');
   });
 
-  it('renders Dinheiro + Material label with purple color class for both mode', () => {
+  it('renders Dinheiro ou Material label with purple color class for both mode', () => {
     const { container } = render(<DonationModeBadge donationMode="both" />);
-    const badge = screen.getByText('Dinheiro + Material');
+    const badge = screen.getByText('Dinheiro ou Material');
     expect(badge).toBeInTheDocument();
     const span = container.querySelector('span');
     expect(span).toHaveClass('bg-purple-100');

@@ -20,7 +20,7 @@ const modeConfig: Record<DonationMode, { label: string; bg: string; color: strin
     color: '#1D4ED8',
   },
   both: {
-    label: 'Dinheiro + Material',
+    label: 'Dinheiro ou Material',
     bg: '#F3E8FF',
     color: '#7E22CE',
   },

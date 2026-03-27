@@ -315,7 +315,7 @@ export function ProductForm({ categories, product, imageUrl }: ProductFormProps)
                   <SelectContent>
                     <SelectItem value="monetary">Dinheiro</SelectItem>
                     <SelectItem value="physical">Material</SelectItem>
-                    <SelectItem value="both">Dinheiro + Material</SelectItem>
+                    <SelectItem value="both">Dinheiro ou Material</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
