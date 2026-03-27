@@ -11,12 +11,21 @@ interface CatalogPageProps {
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const { category: categoryId } = await searchParams;
 
-  const [categories, products] = await Promise.all([
+  const [categories, rawProducts] = await Promise.all([
     getCategories(),
     categoryId
       ? getProductsByCategory(categoryId)
       : getPublishedProducts(),
   ]);
+
+  const isGoalReached = (p: (typeof rawProducts)[number]) =>
+    p.isFulfilled || (p.targetAmount != null && p.currentAmount >= p.targetAmount);
+
+  const products = [...rawProducts].sort((a, b) => {
+    const aReached = isGoalReached(a) ? 1 : 0;
+    const bReached = isGoalReached(b) ? 1 : 0;
+    return aReached - bReached;
+  });
 
   return (
     <>
@@ -77,8 +86,8 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         {/* ── Produtos ─────────────────────────────── */}
         <section id="doacoes" className="scroll-mt-[188px] pt-10">
           {(() => {
-            const fulfilledCount = products.filter((p) => p.isFulfilled).length;
-            const pendingCount = products.length - fulfilledCount;
+          const fulfilledCount = products.filter(isGoalReached).length;
+          const pendingCount = products.length - fulfilledCount;
             return (
               <div className="flex items-baseline gap-[14px] mb-5">
                 <h2 className="font-serif font-bold text-[28px] leading-[34px] text-[#B8952E]">

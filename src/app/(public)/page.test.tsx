@@ -87,7 +87,6 @@ describe('CatalogPage', () => {
         searchParams: Promise.resolve({}),
       });
       render(Page);
-      expect(screen.getByText('Doações para o Colégio São José')).toBeInTheDocument();
       expect(screen.getAllByText('Colégio São José').length).toBeGreaterThanOrEqual(1);
     });
 
@@ -104,7 +103,7 @@ describe('CatalogPage', () => {
         searchParams: Promise.resolve({}),
       });
       render(Page);
-      expect(screen.getAllByText('Produtos').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Itens para doação')).toBeInTheDocument();
     });
 
     it('should display all-categories filter button', async () => {

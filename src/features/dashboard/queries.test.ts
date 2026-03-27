@@ -6,8 +6,9 @@ vi.mock('@/lib/db', () => ({
   db: {
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue([]),
-        groupBy: vi.fn().mockResolvedValue([]),
+        where: vi.fn().mockReturnValue({
+          groupBy: vi.fn().mockResolvedValue([]),
+        }),
       }),
     }),
     query: {
@@ -36,7 +37,9 @@ describe('getDashboardStats', () => {
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([]),
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockResolvedValue([]),
+            }),
           }),
         });
 
@@ -56,10 +59,12 @@ describe('getDashboardStats', () => {
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([
-              { isFulfilled: false, count: 2 },
-              { isFulfilled: true, count: 1 },
-            ]),
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockResolvedValue([
+                { isFulfilled: false, count: 2 },
+                { isFulfilled: true, count: 1 },
+              ]),
+            }),
           }),
         });
 
@@ -80,7 +85,9 @@ describe('getDashboardStats', () => {
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([]),
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockResolvedValue([]),
+            }),
           }),
         });
 
@@ -99,7 +106,9 @@ describe('getDashboardStats', () => {
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([]),
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockResolvedValue([]),
+            }),
           }),
         });
 
@@ -120,10 +129,12 @@ describe('getDashboardStats', () => {
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([
-              { isFulfilled: true, count: 3 },
-              { isFulfilled: false, count: 5 },
-            ]),
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockResolvedValue([
+                { isFulfilled: true, count: 3 },
+                { isFulfilled: false, count: 5 },
+              ]),
+            }),
           }),
         });
 
@@ -143,7 +154,9 @@ describe('getDashboardStats', () => {
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([{ isFulfilled: false, count: 4 }]),
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockResolvedValue([{ isFulfilled: false, count: 4 }]),
+            }),
           }),
         });
 
@@ -163,7 +176,9 @@ describe('getDashboardStats', () => {
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([{ isFulfilled: true, count: 2 }]),
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockResolvedValue([{ isFulfilled: true, count: 2 }]),
+            }),
           }),
         });
 
@@ -183,7 +198,9 @@ describe('getDashboardStats', () => {
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([]),
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockResolvedValue([]),
+            }),
           }),
         });
 
@@ -205,7 +222,9 @@ describe('getDashboardStats', () => {
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([]),
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockResolvedValue([]),
+            }),
           }),
         });
 
@@ -229,7 +248,9 @@ describe('getDashboardStats', () => {
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([]),
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockResolvedValue([]),
+            }),
           }),
         });
 
@@ -250,10 +271,12 @@ describe('getDashboardStats', () => {
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([
-              { isFulfilled: true, count: 1 },
-              { isFulfilled: false, count: 2 },
-            ]),
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockResolvedValue([
+                { isFulfilled: true, count: 1 },
+                { isFulfilled: false, count: 2 },
+              ]),
+            }),
           }),
         });
 
@@ -294,10 +317,12 @@ describe('getDashboardStats', () => {
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([
-              { isFulfilled: true, count: 1 },
-              { isFulfilled: false, count: 1 },
-            ]),
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockResolvedValue([
+                { isFulfilled: true, count: 1 },
+                { isFulfilled: false, count: 1 },
+              ]),
+            }),
           }),
         });
 
@@ -317,7 +342,9 @@ describe('getDashboardStats', () => {
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([]),
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockResolvedValue([]),
+            }),
           }),
         });
 
@@ -338,7 +365,9 @@ describe('getDashboardStats', () => {
         })
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([]),
+            where: vi.fn().mockReturnValue({
+              groupBy: vi.fn().mockResolvedValue([]),
+            }),
           }),
         });
       return db;
