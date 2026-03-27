@@ -1,5 +1,5 @@
 import { getDonationsFiltered, type DonationRow } from '../queries';
-import { getPublicUrl } from '@/lib/storage/public-url';
+import { generateSignedDownloadUrl } from '@/lib/storage/supabase';
 import { DonationsTableClient } from './DonationsTableClient';
 import type { DonationFilters } from '../lib/parse-filters';
 
@@ -16,11 +16,15 @@ export async function DonationsTableServer({
 }: DonationsTableServerProps) {
   const data = await getDonationsFiltered(filters);
 
-  // Resolve receipt URLs for all donations
-  const preparedRows: PreparedDonationRow[] = data.donations.map((row) => ({
-    ...row,
-    receiptUrl: row.receiptPath ? getPublicUrl('receipts', row.receiptPath) : undefined,
-  }));
+  // Generate signed download URLs for private receipts bucket
+  const preparedRows: PreparedDonationRow[] = await Promise.all(
+    data.donations.map(async (row) => ({
+      ...row,
+      receiptUrl: row.receiptPath
+        ? await generateSignedDownloadUrl('receipts', row.receiptPath).catch(() => undefined)
+        : undefined,
+    }))
+  );
 
   return (
     <DonationsTableClient
