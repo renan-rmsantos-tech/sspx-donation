@@ -9,6 +9,7 @@ const navItems = [
   { href: '/admin/categories', label: 'Categorias' },
   { href: '/admin/pix', label: 'PIX' },
   { href: '/admin/transfers', label: 'Transferências' },
+  { href: '/admin/financeiro', label: 'Financeiro' },
 ];
 
 export function AdminNavLinks() {

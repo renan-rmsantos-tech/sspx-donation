@@ -51,6 +51,22 @@ export const generateSignedUploadUrl = async (
   };
 };
 
+export const generateSignedDownloadUrl = async (
+  bucket: string,
+  path: string,
+  expiresIn = 300
+): Promise<string> => {
+  const { data, error } = await supabaseAdmin.storage
+    .from(bucket)
+    .createSignedUrl(path, expiresIn);
+
+  if (error) {
+    throw new Error(`Failed to generate signed download URL: ${error.message}`);
+  }
+
+  return data.signedUrl;
+};
+
 export const deleteStorageObject = async (
   bucket: string,
   path: string

@@ -2,7 +2,9 @@
 
 import { db } from '@/lib/db';
 import { donations, products, fundTransfers } from '@/lib/db/schema';
-import { eq, desc, and, gt, inArray, isNotNull } from 'drizzle-orm';
+import { eq, desc, and, gt, inArray, isNotNull, gte, lte, ilike, sum, count } from 'drizzle-orm';
+import { startOfWeek, startOfMonth } from 'date-fns';
+import { DonationFilters } from './lib/parse-filters';
 
 export async function getDonationsByProductId(productId: string) {
   try {
@@ -89,6 +91,28 @@ export type ProductForTransfer = {
   targetAmount: number | null;
 };
 
+export interface FinancialSummary {
+  weeklyTotal: number;
+  monthlyTotal: number;
+}
+
+export interface DonationRow {
+  id: string;
+  donationType: string;
+  amount: number | null;
+  donorName: string | null;
+  receiptPath: string | null;
+  createdAt: Date;
+  productName: string | null;
+}
+
+export interface PaginatedDonations {
+  donations: DonationRow[];
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+}
+
 export async function getProductsForTransfer(): Promise<{
   sourceProducts: ProductForTransfer[];
   targetProducts: ProductForTransfer[];
@@ -128,5 +152,117 @@ export async function getProductsForTransfer(): Promise<{
   } catch (error) {
     console.error('getProductsForTransfer error:', error);
     return { sourceProducts: [], targetProducts: [] };
+  }
+}
+
+const PAGE_SIZE = 20;
+
+export async function getFinancialSummary(): Promise<FinancialSummary> {
+  try {
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
+    const monthStart = startOfMonth(new Date());
+
+    const [weeklyResult, monthlyResult] = await Promise.all([
+      db
+        .select({ total: sum(donations.amount) })
+        .from(donations)
+        .where(
+          and(
+            eq(donations.donationType, 'monetary'),
+            gte(donations.createdAt, weekStart)
+          )
+        ),
+      db
+        .select({ total: sum(donations.amount) })
+        .from(donations)
+        .where(
+          and(
+            eq(donations.donationType, 'monetary'),
+            gte(donations.createdAt, monthStart)
+          )
+        ),
+    ]);
+
+    return {
+      weeklyTotal: weeklyResult[0]?.total ? Number(weeklyResult[0].total) : 0,
+      monthlyTotal: monthlyResult[0]?.total ? Number(monthlyResult[0].total) : 0,
+    };
+  } catch (error) {
+    console.error('[getFinancialSummary] Failed:', error);
+    return {
+      weeklyTotal: 0,
+      monthlyTotal: 0,
+    };
+  }
+}
+
+export async function getDonationsFiltered(
+  filters: DonationFilters
+): Promise<PaginatedDonations> {
+  try {
+    const offset = (filters.page - 1) * PAGE_SIZE;
+
+    // Build dynamic WHERE conditions
+    const conditions = [];
+
+    if (filters.donationType) {
+      conditions.push(eq(donations.donationType, filters.donationType));
+    }
+
+    if (filters.dateFrom) {
+      conditions.push(gte(donations.createdAt, filters.dateFrom));
+    }
+
+    if (filters.dateTo) {
+      conditions.push(lte(donations.createdAt, filters.dateTo));
+    }
+
+    if (filters.donorName) {
+      conditions.push(ilike(donations.donorName, `%${filters.donorName}%`));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Execute data and count queries in parallel
+    const [donationRows, countResult] = await Promise.all([
+      db
+        .select({
+          id: donations.id,
+          donationType: donations.donationType,
+          amount: donations.amount,
+          donorName: donations.donorName,
+          receiptPath: donations.receiptPath,
+          createdAt: donations.createdAt,
+          productName: products.name,
+        })
+        .from(donations)
+        .leftJoin(products, eq(donations.productId, products.id))
+        .where(whereClause)
+        .orderBy(desc(donations.createdAt))
+        .limit(PAGE_SIZE)
+        .offset(offset),
+      db
+        .select({ total: count() })
+        .from(donations)
+        .where(whereClause),
+    ]);
+
+    const totalCount = countResult[0]?.total ? Number(countResult[0].total) : 0;
+    const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+    return {
+      donations: donationRows,
+      totalCount,
+      totalPages,
+      currentPage: filters.page,
+    };
+  } catch (error) {
+    console.error('[getDonationsFiltered] filters:', filters, 'error:', error);
+    return {
+      donations: [],
+      totalCount: 0,
+      totalPages: 0,
+      currentPage: filters.page,
+    };
   }
 }
