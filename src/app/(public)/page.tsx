@@ -76,15 +76,44 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
 
         {/* ── Produtos ─────────────────────────────── */}
         <section id="doacoes" className="scroll-mt-[188px] pt-10">
-          <div className="flex items-baseline gap-[14px] mb-5">
-            <h2 className="font-serif font-bold text-[28px] leading-[34px] text-[#B8952E]">
-              Itens para doação
-            </h2>
-            <span className="text-[13px] text-[#6B7D8E]">
-              {products.length}{' '}
-              {products.length === 1 ? 'item disponível' : 'itens disponíveis'}
-            </span>
-          </div>
+          {(() => {
+            const fulfilledCount = products.filter((p) => p.isFulfilled).length;
+            const pendingCount = products.length - fulfilledCount;
+            return (
+              <div className="flex items-baseline gap-[14px] mb-5">
+                <h2 className="font-serif font-bold text-[28px] leading-[34px] text-[#B8952E]">
+                  Itens para doação
+                </h2>
+                <span className="text-[13px] text-[#6B7D8E]">
+                  {products.length}{' '}
+                  {products.length === 1 ? 'item disponível' : 'itens disponíveis'}
+                </span>
+
+                {products.length > 0 && (
+                  <>
+                    <span className="self-center w-px h-[14px] bg-[#CBD5DF] flex-shrink-0" />
+
+                    <span className="self-center flex items-center gap-[5px] px-[10px] py-[3px] bg-[#FBF3E2] border border-[#E2C97E] rounded-full flex-shrink-0">
+                      <span className="w-[6px] h-[6px] rounded-full bg-[#C9952A] flex-shrink-0" />
+                      <span className="text-[12px] font-medium text-[#8A6A1A] leading-none">
+                        {pendingCount}{' '}
+                        {pendingCount === 1 ? 'pendente' : 'pendentes'}
+                      </span>
+                    </span>
+
+                    <span className="self-center flex items-center gap-[5px] px-[10px] py-[3px] bg-[#EDF6EE] border border-[#9BC9A4] rounded-full flex-shrink-0">
+                      <span className="w-[6px] h-[6px] rounded-full bg-[#3A8A4E] flex-shrink-0" />
+                      <span className="text-[12px] font-medium text-[#2D6A3F] leading-none">
+                        {fulfilledCount}{' '}
+                        {fulfilledCount === 1 ? 'atingido' : 'atingidos'}
+                      </span>
+                    </span>
+                  </>
+                )}
+              </div>
+            );
+          })()}
+
 
           {categories.length > 0 && (
             <div className="mb-7">
