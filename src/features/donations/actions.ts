@@ -354,6 +354,46 @@ export async function uploadFile(
 }
 
 /**
+ * Toggle the verification status of a donation (admin only)
+ */
+export async function toggleDonationVerified(
+  donationId: string
+): Promise<ActionResult<{ isVerified: boolean }>> {
+  try {
+    const isAdmin = await validateSession();
+    if (!isAdmin) {
+      return { success: false, error: 'UNAUTHORIZED' };
+    }
+
+    const donation = await db.query.donations.findFirst({
+      where: eq(donations.id, donationId),
+      columns: { id: true, isVerified: true },
+    });
+
+    if (!donation) {
+      return { success: false, error: 'NOT_FOUND' };
+    }
+
+    const newValue = !donation.isVerified;
+
+    await db
+      .update(donations)
+      .set({ isVerified: newValue })
+      .where(eq(donations.id, donationId));
+
+    revalidatePath('/admin/financeiro');
+
+    return {
+      success: true,
+      data: { isVerified: newValue },
+    };
+  } catch (error) {
+    console.error('toggleDonationVerified error:', error);
+    return { success: false, error: 'INTERNAL_ERROR' };
+  }
+}
+
+/**
  * Create a fund transfer between products with transaction atomicity and row-level locking
  */
 export async function createFundTransfer(

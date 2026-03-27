@@ -61,6 +61,7 @@ export const donations = pgTable('donations', {
   donorPhone: text('donor_phone'), // required for physical
   donorEmail: text('donor_email'), // optional
   receiptPath: text('receipt_path'), // Supabase Storage path, monetary only
+  isVerified: boolean('is_verified').default(false).notNull(), // financial team verification flag
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
