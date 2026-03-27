@@ -22,6 +22,7 @@ type Product = {
   id: string;
   name: string;
   currentAmount: number;
+  targetAmount: number | null;
 };
 
 type FundTransferFormProps = {
@@ -42,7 +43,12 @@ export function FundTransferForm({
   const [loading, setLoading] = useState(false);
 
   const sourceProduct = sourceProducts.find((p) => p.id === sourceProductId);
-  const maxAmountReais = sourceProduct ? sourceProduct.currentAmount / 100 : undefined;
+  // Transferable amount is only the surplus: currentAmount - targetAmount
+  const surplusCents =
+    sourceProduct && sourceProduct.targetAmount !== null
+      ? sourceProduct.currentAmount - sourceProduct.targetAmount
+      : (sourceProduct?.currentAmount ?? 0);
+  const maxAmountReais = sourceProduct ? surplusCents / 100 : undefined;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,9 +74,9 @@ export function FundTransferForm({
         return;
       }
 
-      if (sourceProduct && amountCents > sourceProduct.currentAmount) {
+      if (sourceProduct && amountCents > surplusCents) {
         toast.error(
-          `Valor excede o saldo disponível. Máximo: ${formatCurrency(sourceProduct.currentAmount)}`
+          `Valor excede o excedente disponível. Máximo: ${formatCurrency(surplusCents)}`
         );
         setLoading(false);
         return;
@@ -92,7 +98,7 @@ export function FundTransferForm({
       } else {
         toast.error(
           result.error === 'INSUFFICIENT_BALANCE'
-            ? `Saldo insuficiente. Disponível: ${formatCurrency(sourceProduct?.currentAmount || 0)}`
+            ? `Excedente insuficiente. Disponível: ${formatCurrency(surplusCents)}`
             : result.error === 'VALIDATION_ERROR'
               ? 'Verifique os campos. Certifique-se de que origem e destino são diferentes e o valor é válido.'
               : result.error === 'PRODUCT_NOT_FOUND'
@@ -121,7 +127,15 @@ export function FundTransferForm({
           {sourceProduct && (
             <Alert>
               <AlertDescription>
-                Saldo disponível: {formatCurrency(sourceProduct.currentAmount)}
+                Excedente disponível para transferência:{' '}
+                <strong>{formatCurrency(surplusCents)}</strong>
+                {sourceProduct.targetAmount !== null && (
+                  <span className="text-muted-foreground">
+                    {' '}
+                    (meta: {formatCurrency(sourceProduct.targetAmount)} · arrecadado:{' '}
+                    {formatCurrency(sourceProduct.currentAmount)})
+                  </span>
+                )}
               </AlertDescription>
             </Alert>
           )}
@@ -133,11 +147,17 @@ export function FundTransferForm({
                 <SelectValue placeholder="Selecione o produto de origem" />
               </SelectTrigger>
               <SelectContent>
-                {sourceProducts.map((product) => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {product.name} ({formatCurrency(product.currentAmount)})
-                  </SelectItem>
-                ))}
+                {sourceProducts.map((product) => {
+                  const surplus =
+                    product.targetAmount !== null
+                      ? product.currentAmount - product.targetAmount
+                      : product.currentAmount;
+                  return (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name} (excedente: {formatCurrency(surplus)})
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -175,7 +195,7 @@ export function FundTransferForm({
             />
             <p className="text-xs text-muted-foreground">
               {sourceProduct
-                ? `Mínimo R$ 1,00 · Máximo ${formatCurrency(sourceProduct.currentAmount)}`
+                ? `Mínimo R$ 1,00 · Máximo ${formatCurrency(surplusCents)}`
                 : 'Mínimo R$ 1,00'}
             </p>
           </div>

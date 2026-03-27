@@ -378,6 +378,7 @@ export async function createFundTransfer(
         columns: {
           id: true,
           currentAmount: true,
+          targetAmount: true,
         },
         where: inArray(products.id, [
           validated.sourceProductId,
@@ -397,12 +398,18 @@ export async function createFundTransfer(
         throw new Error('PRODUCT_NOT_FOUND');
       }
 
+      // Only the surplus (currentAmount - targetAmount) is available for transfer.
+      const surplusCents =
+        sourceProduct.targetAmount !== null
+          ? sourceProduct.currentAmount - sourceProduct.targetAmount
+          : sourceProduct.currentAmount;
+
       // Fast-fail before write for clearer domain error.
-      if (sourceProduct.currentAmount < validated.amount) {
+      if (surplusCents < validated.amount) {
         throw new Error('INSUFFICIENT_BALANCE');
       }
 
-      // Guarded decrement prevents concurrent overdraft race conditions.
+      // Guarded decrement: ensures the result stays >= targetAmount (never transfers below the goal).
       const sourceUpdate = await tx
         .update(products)
         .set({
@@ -412,7 +419,10 @@ export async function createFundTransfer(
         .where(
           and(
             eq(products.id, validated.sourceProductId),
-            gte(products.currentAmount, validated.amount)
+            gte(
+              products.currentAmount,
+              sql`${validated.amount} + COALESCE(${products.targetAmount}, 0)`
+            )
           )
         )
         .returning({ id: products.id });

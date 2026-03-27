@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db';
 import { donations, products, fundTransfers } from '@/lib/db/schema';
-import { eq, desc, and, gte } from 'drizzle-orm';
+import { eq, desc, and, gt, inArray, isNotNull } from 'drizzle-orm';
 
 export async function getDonationsByProductId(productId: string) {
   try {
@@ -82,12 +82,11 @@ export async function getFundTransfers(filters?: { productId?: string }) {
   }
 }
 
-const MIN_TRANSFER_CENTS = 100; // R$ 1,00
-
 export type ProductForTransfer = {
   id: string;
   name: string;
   currentAmount: number;
+  targetAmount: number | null;
 };
 
 export async function getProductsForTransfer(): Promise<{
@@ -96,15 +95,19 @@ export async function getProductsForTransfer(): Promise<{
 }> {
   try {
     const [sourceProducts, targetProducts] = await Promise.all([
+      // Source: monetary products where donations exceed the target (has surplus to transfer)
       db.query.products.findMany({
         columns: {
           id: true,
           name: true,
           currentAmount: true,
+          targetAmount: true,
         },
         where: and(
           eq(products.isPublished, true),
-          gte(products.currentAmount, MIN_TRANSFER_CENTS)
+          inArray(products.donationMode, ['monetary', 'both']),
+          isNotNull(products.targetAmount),
+          gt(products.currentAmount, products.targetAmount)
         ),
       }),
       db.query.products.findMany({
@@ -112,6 +115,7 @@ export async function getProductsForTransfer(): Promise<{
           id: true,
           name: true,
           currentAmount: true,
+          targetAmount: true,
         },
         where: and(
           eq(products.isPublished, true),

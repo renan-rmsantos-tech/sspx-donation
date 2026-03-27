@@ -4,8 +4,6 @@ import { db } from '@/lib/db';
 import { donations, products } from '@/lib/db/schema';
 import { eq, sum, countDistinct } from 'drizzle-orm';
 
-const MIN_TRANSFER_CENTS = 100; // R$ 1,00
-
 export interface DashboardStats {
   totalMonetaryDonations: number;
   totalPhysicalFulfilled: number;
@@ -34,13 +32,28 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     const totalPhysicalPending =
       physicalResult.find((r) => r.isFulfilled === false)?.count || 0;
 
-    // Check if transfers are available: 2+ products and at least 1 with balance >= R$ 1,00
+    // Check if transfers are available: at least 1 monetary product with surplus + 2 target products
     const productsForTransfer = await db.query.products.findMany({
-      columns: { id: true, currentAmount: true },
+      columns: {
+        id: true,
+        isPublished: true,
+        isFulfilled: true,
+        donationMode: true,
+        currentAmount: true,
+        targetAmount: true,
+      },
     });
-    const hasTransfersAvailable =
-      productsForTransfer.length >= 2 &&
-      productsForTransfer.some((p) => p.currentAmount >= MIN_TRANSFER_CENTS);
+    const hasSourceProduct = productsForTransfer.some(
+      (p) =>
+        p.isPublished &&
+        (p.donationMode === 'monetary' || p.donationMode === 'both') &&
+        p.targetAmount !== null &&
+        p.currentAmount > p.targetAmount
+    );
+    const targetProductCount = productsForTransfer.filter(
+      (p) => p.isPublished && !p.isFulfilled
+    ).length;
+    const hasTransfersAvailable = hasSourceProduct && targetProductCount >= 2;
 
     return {
       totalMonetaryDonations,

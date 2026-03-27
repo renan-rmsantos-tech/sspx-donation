@@ -328,7 +328,7 @@ describe('getDashboardStats', () => {
   });
 
   describe('hasTransfersAvailable', () => {
-    it('should return true when 2+ products and at least one has balance >= R$ 1,00', async () => {
+    const makeSelectMocks = async () => {
       const { db } = await import('@/lib/db');
       vi.mocked(db.select)
         .mockReturnValueOnce({
@@ -341,9 +341,36 @@ describe('getDashboardStats', () => {
             groupBy: vi.fn().mockResolvedValue([]),
           }),
         });
+      return db;
+    };
+
+    it('should return true when a monetary product has surplus and 2+ non-fulfilled targets exist', async () => {
+      const db = await makeSelectMocks();
       vi.mocked(db.query.products.findMany).mockResolvedValue([
-        { id: 'p1', currentAmount: 500 },
-        { id: 'p2', currentAmount: 0 },
+        {
+          id: 'p1',
+          isPublished: true,
+          isFulfilled: false,
+          donationMode: 'monetary',
+          currentAmount: 12000,
+          targetAmount: 10000,
+        },
+        {
+          id: 'p2',
+          isPublished: true,
+          isFulfilled: false,
+          donationMode: 'physical',
+          currentAmount: 0,
+          targetAmount: 5000,
+        },
+        {
+          id: 'p3',
+          isPublished: true,
+          isFulfilled: false,
+          donationMode: 'physical',
+          currentAmount: 0,
+          targetAmount: 3000,
+        },
       ]);
 
       const result = await getDashboardStats();
@@ -351,21 +378,25 @@ describe('getDashboardStats', () => {
       expect(result.hasTransfersAvailable).toBe(true);
     });
 
-    it('should return false when only one product', async () => {
-      const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: 0 }]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([]),
-          }),
-        });
+    it('should return false when monetary product has surplus but fewer than 2 non-fulfilled targets', async () => {
+      const db = await makeSelectMocks();
       vi.mocked(db.query.products.findMany).mockResolvedValue([
-        { id: 'p1', currentAmount: 500 },
+        {
+          id: 'p1',
+          isPublished: true,
+          isFulfilled: false,
+          donationMode: 'monetary',
+          currentAmount: 12000,
+          targetAmount: 10000,
+        },
+        {
+          id: 'p2',
+          isPublished: true,
+          isFulfilled: true,
+          donationMode: 'physical',
+          currentAmount: 5000,
+          targetAmount: 5000,
+        },
       ]);
 
       const result = await getDashboardStats();
@@ -373,22 +404,93 @@ describe('getDashboardStats', () => {
       expect(result.hasTransfersAvailable).toBe(false);
     });
 
-    it('should return false when no product has balance >= R$ 1,00', async () => {
-      const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: 0 }]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            groupBy: vi.fn().mockResolvedValue([]),
-          }),
-        });
+    it('should return false when no monetary product has surplus (currentAmount <= targetAmount)', async () => {
+      const db = await makeSelectMocks();
       vi.mocked(db.query.products.findMany).mockResolvedValue([
-        { id: 'p1', currentAmount: 50 },
-        { id: 'p2', currentAmount: 0 },
+        {
+          id: 'p1',
+          isPublished: true,
+          isFulfilled: false,
+          donationMode: 'monetary',
+          currentAmount: 8000,
+          targetAmount: 10000,
+        },
+        {
+          id: 'p2',
+          isPublished: true,
+          isFulfilled: false,
+          donationMode: 'monetary',
+          currentAmount: 10000,
+          targetAmount: 10000,
+        },
+        {
+          id: 'p3',
+          isPublished: true,
+          isFulfilled: false,
+          donationMode: 'physical',
+          currentAmount: 0,
+          targetAmount: 3000,
+        },
+      ]);
+
+      const result = await getDashboardStats();
+
+      expect(result.hasTransfersAvailable).toBe(false);
+    });
+
+    it('should return false when only physical donation mode products exist (no monetary surplus)', async () => {
+      const db = await makeSelectMocks();
+      vi.mocked(db.query.products.findMany).mockResolvedValue([
+        {
+          id: 'p1',
+          isPublished: true,
+          isFulfilled: false,
+          donationMode: 'physical',
+          currentAmount: 0,
+          targetAmount: 5000,
+        },
+        {
+          id: 'p2',
+          isPublished: true,
+          isFulfilled: false,
+          donationMode: 'physical',
+          currentAmount: 0,
+          targetAmount: 3000,
+        },
+      ]);
+
+      const result = await getDashboardStats();
+
+      expect(result.hasTransfersAvailable).toBe(false);
+    });
+
+    it('should return false when monetary product has surplus but targetAmount is null', async () => {
+      const db = await makeSelectMocks();
+      vi.mocked(db.query.products.findMany).mockResolvedValue([
+        {
+          id: 'p1',
+          isPublished: true,
+          isFulfilled: false,
+          donationMode: 'monetary',
+          currentAmount: 5000,
+          targetAmount: null,
+        },
+        {
+          id: 'p2',
+          isPublished: true,
+          isFulfilled: false,
+          donationMode: 'physical',
+          currentAmount: 0,
+          targetAmount: 3000,
+        },
+        {
+          id: 'p3',
+          isPublished: true,
+          isFulfilled: false,
+          donationMode: 'physical',
+          currentAmount: 0,
+          targetAmount: 2000,
+        },
       ]);
 
       const result = await getDashboardStats();

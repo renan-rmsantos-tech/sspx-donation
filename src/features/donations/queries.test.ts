@@ -80,32 +80,32 @@ describe('donations queries', () => {
   });
 
   describe('getProductsForTransfer', () => {
-    it('returns sourceProducts with balance >= R$ 1,00 and targetProducts not fulfilled', async () => {
+    it('returns sourceProducts with monetary surplus and targetProducts not fulfilled', async () => {
       mockProductsFindMany
         .mockResolvedValueOnce([
-          { id: 'p-1', name: 'Produto A', currentAmount: 1000 },
-          { id: 'p-2', name: 'Produto B', currentAmount: 2500 },
+          { id: 'p-1', name: 'Produto A', currentAmount: 12000, targetAmount: 10000 },
+          { id: 'p-2', name: 'Produto B', currentAmount: 5000, targetAmount: 2500 },
         ])
         .mockResolvedValueOnce([
-          { id: 'p-1', name: 'Produto A', currentAmount: 1000 },
-          { id: 'p-2', name: 'Produto B', currentAmount: 2500 },
-          { id: 'p-3', name: 'Produto C', currentAmount: 500 },
+          { id: 'p-3', name: 'Produto C', currentAmount: 0, targetAmount: 8000 },
+          { id: 'p-4', name: 'Produto D', currentAmount: 500, targetAmount: 5000 },
         ]);
 
       const result = await getProductsForTransfer();
 
       expect(result.sourceProducts).toHaveLength(2);
-      expect(result.sourceProducts[1].currentAmount).toBe(2500);
-      expect(result.targetProducts).toHaveLength(3);
+      expect(result.sourceProducts[0].currentAmount).toBe(12000);
+      expect(result.sourceProducts[0].targetAmount).toBe(10000);
+      expect(result.targetProducts).toHaveLength(2);
       expect(mockProductsFindMany).toHaveBeenCalledTimes(2);
     });
 
-    it('returns empty sourceProducts when no product has balance >= R$ 1,00', async () => {
+    it('returns empty sourceProducts when no monetary product has surplus', async () => {
       mockProductsFindMany
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([
-          { id: 'p-1', name: 'Produto A', currentAmount: 0 },
-          { id: 'p-2', name: 'Produto B', currentAmount: 50 },
+          { id: 'p-1', name: 'Produto A', currentAmount: 0, targetAmount: 5000 },
+          { id: 'p-2', name: 'Produto B', currentAmount: 3000, targetAmount: 5000 },
         ]);
 
       const result = await getProductsForTransfer();
@@ -117,7 +117,7 @@ describe('donations queries', () => {
     it('returns empty targetProducts when all products are fulfilled', async () => {
       mockProductsFindMany
         .mockResolvedValueOnce([
-          { id: 'p-1', name: 'Produto A', currentAmount: 5000 },
+          { id: 'p-1', name: 'Produto A', currentAmount: 12000, targetAmount: 10000 },
         ])
         .mockResolvedValueOnce([]);
 
