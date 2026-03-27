@@ -103,7 +103,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           </div>
 
           {/* Status */}
-          <div className="bg-[#EDE9DE] px-8 py-7 border-b border-[#E4DDD1]">
+          {!(isFullyFunded || product.isFulfilled) && <div className="bg-[#EDE9DE] px-8 py-7 border-b border-[#E4DDD1]">
             <h2 className="font-serif font-semibold text-[18px] leading-[22px] text-[#2C4A5A] mb-1">
               Status
             </h2>
@@ -210,7 +210,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 </div>
               )}
             </div>
-          </div>
+          </div>}
 
           {/* Donation section */}
           {isFullyFunded || product.isFulfilled ? (
