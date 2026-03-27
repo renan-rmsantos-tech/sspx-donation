@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Table,
   TableBody,
@@ -13,8 +13,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ReceiptModal } from './ReceiptModal';
 import { DonationsPagination } from './DonationsPagination';
+import { toggleDonationVerified } from '../actions';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 import type { DonationRow } from '../queries';
 import type { PreparedDonationRow } from './DonationsTableServer';
 
@@ -33,6 +35,8 @@ export function DonationsTableClient({
 }: DonationsTableClientProps) {
   const [selectedDonation, setSelectedDonation] = useState<PreparedDonationRow | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   if (totalCount === 0) {
     return (
@@ -42,6 +46,17 @@ export function DonationsTableClient({
       </div>
     );
   }
+
+  const handleToggleVerified = (donationId: string) => {
+    setTogglingId(donationId);
+    startTransition(async () => {
+      const result = await toggleDonationVerified(donationId);
+      if (!result.success) {
+        toast.error('Erro ao atualizar verificação.');
+      }
+      setTogglingId(null);
+    });
+  };
 
   const handleOpenReceipt = (donation: PreparedDonationRow) => {
     setSelectedDonation(donation);
@@ -58,6 +73,7 @@ export function DonationsTableClient({
               <TableHead className="text-[#1E3D59] font-bold">Tipo</TableHead>
               <TableHead className="text-[#1E3D59] font-bold">Valor/Item</TableHead>
               <TableHead className="text-[#1E3D59] font-bold">Data</TableHead>
+              <TableHead className="text-[#1E3D59] font-bold text-center">Verificado</TableHead>
               <TableHead className="text-[#1E3D59] font-bold text-right">Comprovante</TableHead>
             </TableRow>
           </TableHeader>
@@ -85,6 +101,28 @@ export function DonationsTableClient({
                 </TableCell>
                 <TableCell className="text-[#666]">
                   {format(new Date(row.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
+                </TableCell>
+                <TableCell className="text-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleToggleVerified(row.id)}
+                    disabled={isPending && togglingId === row.id}
+                    className={`h-7 w-7 p-0 rounded-full ${
+                      row.isVerified
+                        ? 'bg-[#DCFCE7] text-[#22A55A] hover:bg-[#BBF7D0]'
+                        : 'bg-[#F3F4F6] text-[#9CA3AF] hover:bg-[#E5E7EB]'
+                    }`}
+                    title={row.isVerified ? 'Verificado' : 'Não verificado'}
+                  >
+                    {isPending && togglingId === row.id ? (
+                      <span className="animate-spin text-xs">⏳</span>
+                    ) : row.isVerified ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+                    )}
+                  </Button>
                 </TableCell>
                 <TableCell className="text-right">
                   {row.receiptPath ? (
