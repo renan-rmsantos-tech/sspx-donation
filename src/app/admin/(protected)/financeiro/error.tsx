@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 
 interface ErrorProps {
@@ -8,6 +9,14 @@ interface ErrorProps {
 }
 
 export default function Error({ error, reset }: ErrorProps) {
+  useEffect(() => {
+    console.error('FinanceiroPage Error Boundary:', {
+      message: error.message,
+      digest: error.digest,
+      stack: error.stack,
+    });
+  }, [error]);
+
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-12">
       <h2 className="font-bold text-lg text-[#1E3D59]">
