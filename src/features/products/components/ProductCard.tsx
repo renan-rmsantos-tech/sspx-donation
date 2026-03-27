@@ -70,7 +70,7 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Progress footer */}
-        <div className="px-5 pt-4 pb-5 border-t border-[#E5DFD4]">
+        <div className="px-5 pt-4 pb-5 border-t border-[#E5DFD4] min-h-[88px] flex flex-col justify-center">
           {isGoalReached ? (
             <div className="flex items-center gap-2 rounded-full py-2 px-5 border-[1.5px] border-[#22A55A] bg-[#ECFDF3] w-fit mx-auto">
               <span className="w-2 h-2 rounded-full bg-[#22A55A] flex-shrink-0" />
