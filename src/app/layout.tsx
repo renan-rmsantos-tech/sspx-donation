@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Playfair_Display } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
 const playfairDisplay = Playfair_Display({
@@ -39,6 +40,10 @@ export default function RootLayout({
         >
           {children}
           <Toaster richColors position="top-center" duration={4000} />
+          <Analytics beforeSend={(event) => {
+            if (event.url.includes('/admin')) return null;
+            return event;
+          }} />
         </ThemeProvider>
       </body>
     </html>
