@@ -1,12 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { useState } from 'react';
 import { deleteProduct } from '../actions';
 import { formatCurrency } from '@/lib/utils/format';
 import { getPublicUrl } from '@/lib/storage/public-url';
 import { PlaceholderImage } from '@/components/ui/placeholder-image';
+import { ProductImage } from './ProductImage';
 import { DonationModeBadge } from './DonationModeBadge';
 import { toast } from 'sonner';
 import {
@@ -99,7 +99,7 @@ export function ProductList({ products }: { products: Product[] }) {
               >
                 <div className="relative w-12 h-12 flex-shrink-0 rounded border border-[#D4C4A8] overflow-hidden bg-[#F5F2EA]">
                   {imageUrl ? (
-                    <Image
+                    <ProductImage
                       src={imageUrl}
                       alt={product.name}
                       width={48}
