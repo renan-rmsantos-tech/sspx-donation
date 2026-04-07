@@ -1,8 +1,10 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { getPublishedProducts, getProductsByCategory } from '@/features/products/queries';
 import { getCategories } from '@/features/categories/queries';
 import { ProductGrid } from '@/features/products/components/ProductGrid';
 import { PublicNav } from './components/PublicNav';
+import { PublicFooter } from './components/PublicFooter';
 
 interface CatalogPageProps {
   searchParams: Promise<{ category?: string }>;
@@ -36,13 +38,24 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         {/* ── Mensagem ─────────────────────────────── */}
         <section
           id="mensagem"
-          className="scroll-mt-[188px] pt-9 pb-10 border-b border-[#D4C4A8]"
+          className="relative scroll-mt-[188px] pt-9 pb-10 border-b border-[#D4C4A8] overflow-hidden"
         >
+          {/* Marca d'água */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[340px] opacity-[0.06] pointer-events-none">
+            <Image
+              src="/logo-fsspx.png"
+              alt=""
+              fill
+              className="object-contain"
+              aria-hidden="true"
+            />
+          </div>
+
           <h2 className="font-serif font-bold text-[28px] leading-[34px] text-[#B8952E] mb-5">
             Mensagem
           </h2>
 
-          <div className="flex flex-col gap-[14px]">
+          <div className="relative flex flex-col gap-[14px]">
             <p className="text-[16px] leading-[1.7] text-[#3D4F5F] m-0">
               O nosso Colégio São José, finalmente nasceu e recorre à sua generosidade.
             </p>
@@ -77,7 +90,10 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 Muito obrigado — Que Deus os abençoe
               </p>
               <p className="font-serif font-semibold text-[15px] leading-[18px] text-[#1E3D59] mt-1">
-                Pe. João Maria Ferreira da Costa, Diretor
+                Pe. João Maria Ferreira da Costa, FSSPX
+              </p>
+              <p className="font-serif font-semibold text-[15px] leading-[18px] text-[#1E3D59] mt-0">
+                Diretor do Colégio
               </p>
             </div>
           </div>
@@ -169,6 +185,8 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
 
 
       </main>
+
+      <PublicFooter />
     </>
   );
 }
