@@ -1,9 +1,8 @@
-import Image from 'next/image';
-
 export function PublicFooter() {
   return (
     <footer className="flex flex-col items-center gap-[14px] w-full bg-[#1E3D59] py-8 px-12">
-      <Image
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
         src="/logo-fsspx.png"
         alt="Logo FSSPX"
         width={46}

@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { getPublishedProducts, getProductsByCategory } from '@/features/products/queries';
 import { getCategories } from '@/features/categories/queries';
@@ -41,13 +40,12 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           className="relative scroll-mt-[188px] pt-9 pb-10 border-b border-[#D4C4A8] overflow-hidden"
         >
           {/* Marca d'água */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[340px] opacity-[0.06] pointer-events-none">
-            <Image
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[340px] opacity-[0.06] pointer-events-none" aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src="/logo-fsspx.png"
               alt=""
-              fill
-              className="object-contain"
-              aria-hidden="true"
+              className="w-full h-full object-contain"
             />
           </div>
 
