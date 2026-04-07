@@ -18,7 +18,7 @@ export default async function FinanceiroPage({
   return (
     <div className="flex flex-col gap-8">
       <h1 className="font-serif font-bold text-[36px] leading-[44px] text-[#1E3D59]">
-        Financeiro
+        Doações
       </h1>
 
       <Suspense fallback={<FinancialSummarySkeleton />}>
@@ -27,7 +27,7 @@ export default async function FinanceiroPage({
 
       <DonationsFilterBar filters={filters} />
 
-      <Suspense fallback={<DonationsTableSkeleton />}>
+      <Suspense key={JSON.stringify(filters)} fallback={<DonationsTableSkeleton />}>
         <DonationsTableServer filters={filters} />
       </Suspense>
     </div>
