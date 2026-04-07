@@ -16,6 +16,13 @@ export async function DonationsTableServer({
 }: DonationsTableServerProps) {
   const data = await getDonationsFiltered(filters);
 
+  // Build search params for pagination links (excluding page itself)
+  const paginationParams: Record<string, string> = {};
+  if (filters.donationType) paginationParams.donationType = filters.donationType;
+  if (filters.dateFrom) paginationParams.dateFrom = filters.dateFrom.toISOString();
+  if (filters.dateTo) paginationParams.dateTo = filters.dateTo.toISOString();
+  if (filters.donorName) paginationParams.donorName = filters.donorName;
+
   // Generate signed download URLs for private receipts bucket
   const preparedRows: PreparedDonationRow[] = await Promise.all(
     data.donations.map(async (row) => ({
@@ -32,6 +39,7 @@ export async function DonationsTableServer({
       totalCount={data.totalCount}
       totalPages={data.totalPages}
       currentPage={data.currentPage}
+      paginationParams={paginationParams}
     />
   );
 }

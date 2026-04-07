@@ -26,6 +26,7 @@ interface DonationsTableClientProps {
   totalCount: number;
   totalPages: number;
   currentPage: number;
+  paginationParams?: Record<string, string>;
 }
 
 export function DonationsTableClient({
@@ -33,6 +34,7 @@ export function DonationsTableClient({
   totalCount,
   totalPages,
   currentPage,
+  paginationParams,
 }: DonationsTableClientProps) {
   const [selectedDonation, setSelectedDonation] = useState<PreparedDonationRow | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
@@ -168,7 +170,7 @@ export function DonationsTableClient({
         </Table>
       </div>
 
-      <DonationsPagination currentPage={currentPage} totalPages={totalPages} />
+      <DonationsPagination currentPage={currentPage} totalPages={totalPages} searchParams={paginationParams} />
 
       <ReceiptModal
         donation={selectedDonation}
