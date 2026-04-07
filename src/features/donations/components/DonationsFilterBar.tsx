@@ -48,12 +48,16 @@ export function DonationsFilterBar({ filters }: DonationsFilterBarProps) {
 
   // Handle donor name debouncing
   useEffect(() => {
+    const currentUrlValue = searchParams.get('donorName') || '';
+    // Skip if the value already matches the URL to avoid resetting page on re-renders
+    if (donorName === currentUrlValue) return;
+
     if (donorNameTimeoutRef.current) {
       clearTimeout(donorNameTimeoutRef.current);
     }
 
     donorNameTimeoutRef.current = setTimeout(() => {
-      handleFilterChange('donorName', donorName);
+      handleFilterChange('donorName', donorName || null);
     }, 300);
 
     return () => {
@@ -61,7 +65,7 @@ export function DonationsFilterBar({ filters }: DonationsFilterBarProps) {
         clearTimeout(donorNameTimeoutRef.current);
       }
     };
-  }, [donorName, handleFilterChange]);
+  }, [donorName, handleFilterChange, searchParams]);
 
   const handleClearFilters = () => {
     router.push('/admin/financeiro?page=1');

@@ -104,6 +104,7 @@ export interface DonationRow {
   donorEmail: string | null;
   receiptPath: string | null;
   isVerified: boolean;
+  emailSentAt: Date | null;
   createdAt: Date;
   productName: string | null;
 }
@@ -236,6 +237,7 @@ export async function getDonationsFiltered(
           donorEmail: donations.donorEmail,
           receiptPath: donations.receiptPath,
           isVerified: donations.isVerified,
+          emailSentAt: donations.emailSentAt,
           createdAt: donations.createdAt,
           productName: products.name,
         })

@@ -137,15 +137,28 @@ export function DonationsTableClient({
                 </TableCell>
                 <TableCell className="text-center">
                   {row.donorEmail ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleOpenEmail(row)}
-                      className="h-7 w-7 p-0 text-[#1E3D59] hover:text-[#1E3D59] hover:bg-[#F5F5F5]"
-                      title={`Enviar email para ${row.donorEmail}`}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                    </Button>
+                    <div className="relative inline-flex">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenEmail(row)}
+                        className={`h-7 w-7 p-0 hover:bg-[#F5F5F5] ${
+                          row.emailSentAt
+                            ? 'text-[#22A55A] hover:text-[#22A55A]'
+                            : 'text-[#1E3D59] hover:text-[#1E3D59]'
+                        }`}
+                        title={
+                          row.emailSentAt
+                            ? `Email enviado em ${format(new Date(row.emailSentAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })} — clique para reenviar`
+                            : `Enviar email para ${row.donorEmail}`
+                        }
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                      </Button>
+                      {row.emailSentAt && (
+                        <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#22A55A] border border-white" />
+                      )}
+                    </div>
                   ) : (
                     <span className="text-[#999]">—</span>
                   )}

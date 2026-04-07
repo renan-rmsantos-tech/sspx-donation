@@ -62,6 +62,7 @@ export const donations = pgTable('donations', {
   donorEmail: text('donor_email'), // optional
   receiptPath: text('receipt_path'), // Supabase Storage path, monetary only
   isVerified: boolean('is_verified').default(false).notNull(), // financial team verification flag
+  emailSentAt: timestamp('email_sent_at'), // timestamp of last thank-you email sent
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

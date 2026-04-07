@@ -625,6 +625,14 @@ export async function sendThankYouEmail(
       };
     }
 
+    // Mark donation as email sent
+    await db
+      .update(donations)
+      .set({ emailSentAt: new Date() })
+      .where(eq(donations.id, validated.donationId));
+
+    revalidatePath('/admin/financeiro');
+
     return {
       success: true,
       data: { emailId: data!.id },

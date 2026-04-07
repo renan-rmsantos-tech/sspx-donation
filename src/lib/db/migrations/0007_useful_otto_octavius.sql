@@ -1,0 +1,1 @@
+ALTER TABLE "donations" ADD COLUMN "email_sent_at" timestamp;
