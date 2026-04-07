@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { notFound } from 'next/navigation';
@@ -6,6 +5,7 @@ import { getPublishedProductById } from '@/features/products/queries';
 import { getPixSettings } from '@/features/pix/queries';
 import { getPublicUrl } from '@/lib/storage/public-url';
 import { PRODUCT_PLACEHOLDER_IMAGE } from '@/lib/constants';
+import { ProductImage } from '@/features/products/components/ProductImage';
 import { DonationSection } from '@/features/donations/components/DonationSection';
 import { formatCurrency, calculateProgressPercentage } from '@/lib/utils/format';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -81,7 +81,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           {/* Photo */}
           <div className="px-8 py-6">
             <div className="w-full aspect-square rounded-lg overflow-hidden border border-[#D9CFBE]">
-              <Image
+              <ProductImage
                 src={productImageUrl}
                 alt={product.name}
                 width={600}

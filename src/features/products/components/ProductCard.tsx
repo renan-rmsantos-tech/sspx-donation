@@ -1,10 +1,10 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import type { products } from '@/lib/db/schema';
 import { PRODUCT_PLACEHOLDER_IMAGE } from '@/lib/constants';
 import { getPublicUrl } from '@/lib/storage/public-url';
 import { formatCurrency } from '@/lib/utils/format';
 import { DonationModeBadge } from './DonationModeBadge';
+import { ProductImage } from './ProductImage';
 
 type Product = typeof products.$inferSelect;
 
@@ -43,7 +43,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {/* Image area */}
         <div className="relative h-[200px] flex-shrink-0 bg-[#F5F2EA]">
-          <Image
+          <ProductImage
             src={imageUrl}
             alt={product.name}
             width={300}
