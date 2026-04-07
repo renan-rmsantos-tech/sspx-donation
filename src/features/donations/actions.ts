@@ -14,7 +14,9 @@ import {
   createPhysicalPledgeSchema,
   generateUploadUrlSchema,
   createFundTransferSchema,
+  sendThankYouEmailSchema,
 } from './schemas';
+import { Resend } from 'resend';
 import {
   generateSignedUploadUrl,
   uploadFileDirect,
@@ -564,6 +566,77 @@ export async function createFundTransfer(
             ],
           },
         },
+      };
+    }
+
+    return {
+      success: false,
+      error: 'INTERNAL_ERROR',
+    };
+  }
+}
+
+/**
+ * Send a thank-you email to a donor (admin only)
+ */
+export async function sendThankYouEmail(
+  input: unknown
+): Promise<ActionResult<{ emailId: string }>> {
+  try {
+    const isAdmin = await validateSession();
+    if (!isAdmin) {
+      return { success: false, error: 'UNAUTHORIZED' };
+    }
+
+    const validated = sendThankYouEmailSchema.parse(input);
+
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.error('sendThankYouEmail: RESEND_API_KEY is not configured');
+      return {
+        success: false,
+        error: 'INTERNAL_ERROR',
+        details: { message: 'Serviço de email não configurado.' },
+      };
+    }
+
+    const resend = new Resend(apiKey);
+
+    const { data, error } = await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+      to: validated.donorEmail,
+      subject: validated.subject,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+          <h2 style="color: #1E3D59; margin-bottom: 16px;">${validated.subject}</h2>
+          <p style="color: #333; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">${validated.message}</p>
+          <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 24px 0;" />
+          <p style="color: #9B7B5A; font-size: 14px;">Colégio São José — Campanha de Doações</p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error('sendThankYouEmail Resend error:', error);
+      return {
+        success: false,
+        error: 'INTERNAL_ERROR',
+        details: { message: error.message },
+      };
+    }
+
+    return {
+      success: true,
+      data: { emailId: data!.id },
+    };
+  } catch (error) {
+    console.error('sendThankYouEmail error:', error);
+
+    if (error instanceof ZodError) {
+      return {
+        success: false,
+        error: 'VALIDATION_ERROR',
+        details: error.flatten(),
       };
     }
 

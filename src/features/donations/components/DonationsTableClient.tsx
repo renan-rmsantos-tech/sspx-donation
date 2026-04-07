@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ReceiptModal } from './ReceiptModal';
+import { SendEmailModal } from './SendEmailModal';
 import { DonationsPagination } from './DonationsPagination';
 import { toggleDonationVerified } from '../actions';
 import { format } from 'date-fns';
@@ -35,6 +36,8 @@ export function DonationsTableClient({
 }: DonationsTableClientProps) {
   const [selectedDonation, setSelectedDonation] = useState<PreparedDonationRow | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [emailDonation, setEmailDonation] = useState<PreparedDonationRow | null>(null);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -63,6 +66,11 @@ export function DonationsTableClient({
     setIsReceiptModalOpen(true);
   };
 
+  const handleOpenEmail = (donation: PreparedDonationRow) => {
+    setEmailDonation(donation);
+    setIsEmailModalOpen(true);
+  };
+
   return (
     <>
       <div className="overflow-x-auto">
@@ -74,6 +82,7 @@ export function DonationsTableClient({
               <TableHead className="text-[#1E3D59] font-bold">Valor/Item</TableHead>
               <TableHead className="text-[#1E3D59] font-bold">Data</TableHead>
               <TableHead className="text-[#1E3D59] font-bold text-center">Verificado</TableHead>
+              <TableHead className="text-[#1E3D59] font-bold text-center">Email</TableHead>
               <TableHead className="text-[#1E3D59] font-bold text-right">Comprovante</TableHead>
             </TableRow>
           </TableHeader>
@@ -124,6 +133,21 @@ export function DonationsTableClient({
                     )}
                   </Button>
                 </TableCell>
+                <TableCell className="text-center">
+                  {row.donorEmail ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleOpenEmail(row)}
+                      className="h-7 w-7 p-0 text-[#1E3D59] hover:text-[#1E3D59] hover:bg-[#F5F5F5]"
+                      title={`Enviar email para ${row.donorEmail}`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                    </Button>
+                  ) : (
+                    <span className="text-[#999]">—</span>
+                  )}
+                </TableCell>
                 <TableCell className="text-right">
                   {row.receiptPath ? (
                     <Button
@@ -150,6 +174,12 @@ export function DonationsTableClient({
         donation={selectedDonation}
         isOpen={isReceiptModalOpen}
         onOpenChange={setIsReceiptModalOpen}
+      />
+
+      <SendEmailModal
+        donation={emailDonation}
+        isOpen={isEmailModalOpen}
+        onOpenChange={setIsEmailModalOpen}
       />
     </>
   );

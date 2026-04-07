@@ -69,3 +69,18 @@ export const createFundTransferSchema = z
   );
 
 export type CreateFundTransferInput = z.infer<typeof createFundTransferSchema>;
+
+export const sendThankYouEmailSchema = z.object({
+  donationId: z.string().uuid('ID da doação inválido'),
+  donorEmail: z.string().email('E-mail inválido'),
+  subject: z
+    .string()
+    .min(1, 'Assunto é obrigatório')
+    .max(100, 'Assunto deve ter no máximo 100 caracteres'),
+  message: z
+    .string()
+    .min(1, 'Mensagem é obrigatória')
+    .max(300, 'Mensagem deve ter no máximo 300 caracteres'),
+});
+
+export type SendThankYouEmailInput = z.infer<typeof sendThankYouEmailSchema>;

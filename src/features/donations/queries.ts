@@ -101,6 +101,7 @@ export interface DonationRow {
   donationType: string;
   amount: number | null;
   donorName: string | null;
+  donorEmail: string | null;
   receiptPath: string | null;
   isVerified: boolean;
   createdAt: Date;
@@ -232,6 +233,7 @@ export async function getDonationsFiltered(
           donationType: donations.donationType,
           amount: donations.amount,
           donorName: donations.donorName,
+          donorEmail: donations.donorEmail,
           receiptPath: donations.receiptPath,
           isVerified: donations.isVerified,
           createdAt: donations.createdAt,
