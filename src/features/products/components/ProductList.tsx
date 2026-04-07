@@ -5,9 +5,8 @@ import { useState } from 'react';
 import { deleteProduct } from '../actions';
 import { formatCurrency } from '@/lib/utils/format';
 import { getPublicUrl } from '@/lib/storage/public-url';
-import { PlaceholderImage } from '@/components/ui/placeholder-image';
-import { ProductImage } from './ProductImage';
 import { DonationModeBadge } from './DonationModeBadge';
+import { PRODUCT_PLACEHOLDER_IMAGE } from '@/lib/constants';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -97,18 +96,18 @@ export function ProductList({ products }: { products: Product[] }) {
                   index % 2 === 1 ? 'bg-[#FEFCFB]' : ''
                 }`}
               >
-                <div className="relative w-12 h-12 flex-shrink-0 rounded border border-[#D4C4A8] overflow-hidden bg-[#F5F2EA]">
-                  {imageUrl ? (
-                    <ProductImage
-                      src={imageUrl}
-                      alt={product.name}
-                      width={48}
-                      height={48}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <PlaceholderImage className="w-full h-full" />
-                  )}
+                <div className="w-12 h-12 flex-shrink-0 rounded border border-[#D4C4A8] overflow-hidden bg-[#F5F2EA]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={imageUrl ?? PRODUCT_PLACEHOLDER_IMAGE}
+                    alt={product.name}
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = PRODUCT_PLACEHOLDER_IMAGE;
+                    }}
+                  />
                 </div>
 
                 <span className="flex-[2_1_0%] text-[14px] leading-[18px] text-[#1C1410]">
