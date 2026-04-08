@@ -12,6 +12,9 @@ describe('DashboardPage', () => {
     vi.clearAllMocks();
     vi.mocked(getDashboardStats).mockResolvedValue({
       totalMonetaryDonations: 0,
+      weeklyMonetaryTotal: 0,
+      monthlyMonetaryTotal: 0,
+      totalDonationCount: 0,
       totalPhysicalFulfilled: 0,
       totalPhysicalPending: 0,
       hasTransfersAvailable: false,
@@ -28,6 +31,9 @@ describe('DashboardPage', () => {
     it('should display total monetary donations metric', async () => {
       vi.mocked(getDashboardStats).mockResolvedValue({
         totalMonetaryDonations: 50000,
+        weeklyMonetaryTotal: 0,
+        monthlyMonetaryTotal: 0,
+        totalDonationCount: 1,
         totalPhysicalFulfilled: 0,
         totalPhysicalPending: 0,
         hasTransfersAvailable: false,
@@ -41,6 +47,9 @@ describe('DashboardPage', () => {
     it('should display physical fulfilled metric', async () => {
       vi.mocked(getDashboardStats).mockResolvedValue({
         totalMonetaryDonations: 0,
+        weeklyMonetaryTotal: 0,
+        monthlyMonetaryTotal: 0,
+        totalDonationCount: 3,
         totalPhysicalFulfilled: 3,
         totalPhysicalPending: 0,
         hasTransfersAvailable: false,
@@ -54,6 +63,9 @@ describe('DashboardPage', () => {
     it('should display physical pending metric', async () => {
       vi.mocked(getDashboardStats).mockResolvedValue({
         totalMonetaryDonations: 0,
+        weeklyMonetaryTotal: 0,
+        monthlyMonetaryTotal: 0,
+        totalDonationCount: 5,
         totalPhysicalFulfilled: 0,
         totalPhysicalPending: 5,
         hasTransfersAvailable: false,
@@ -66,31 +78,27 @@ describe('DashboardPage', () => {
   });
 
   describe('Empty state', () => {
-    it('should display empty state message when no data', async () => {
-      vi.mocked(getDashboardStats).mockResolvedValue({
-        totalMonetaryDonations: 0,
-        totalPhysicalFulfilled: 0,
-        totalPhysicalPending: 0,
-        hasTransfersAvailable: false,
-      });
+    it('should render zero values when no data', async () => {
       const Page = await DashboardPage();
       render(Page);
-      expect(
-        screen.getByText(/Ainda não há dados de doações. As métricas aparecerão quando doações ou compromissos forem registrados./)
-      ).toBeInTheDocument();
-      expect(screen.getByTestId('dashboard-empty-state')).toBeInTheDocument();
+      expect(screen.getByText('Total de Doações em Dinheiro')).toBeInTheDocument();
+      expect(screen.getByText('Total de Doações')).toBeInTheDocument();
     });
 
-    it('should not display empty state when any metric has data', async () => {
+    it('should display new metric cards', async () => {
       vi.mocked(getDashboardStats).mockResolvedValue({
         totalMonetaryDonations: 100,
+        weeklyMonetaryTotal: 100,
+        monthlyMonetaryTotal: 100,
+        totalDonationCount: 1,
         totalPhysicalFulfilled: 0,
         totalPhysicalPending: 0,
         hasTransfersAvailable: false,
       });
       const Page = await DashboardPage();
       render(Page);
-      expect(screen.queryByTestId('dashboard-empty-state')).not.toBeInTheDocument();
+      expect(screen.getByText('Total da Semana')).toBeInTheDocument();
+      expect(screen.getByText('Total do Mês')).toBeInTheDocument();
     });
   });
 
@@ -98,6 +106,9 @@ describe('DashboardPage', () => {
     it('should display all metrics with mixed monetary and physical data', async () => {
       vi.mocked(getDashboardStats).mockResolvedValue({
         totalMonetaryDonations: 25000,
+        weeklyMonetaryTotal: 10000,
+        monthlyMonetaryTotal: 20000,
+        totalDonationCount: 5,
         totalPhysicalFulfilled: 2,
         totalPhysicalPending: 3,
         hasTransfersAvailable: false,
@@ -119,6 +130,9 @@ describe('DashboardPage', () => {
         totalMonetaryDonations: 0,
         totalPhysicalFulfilled: 0,
         totalPhysicalPending: 0,
+        weeklyMonetaryTotal: 0,
+        monthlyMonetaryTotal: 0,
+        totalDonationCount: 0,
         hasTransfersAvailable: true,
       });
       const Page = await DashboardPage();
@@ -136,6 +150,9 @@ describe('DashboardPage', () => {
     it('should not display transfer alert when hasTransfersAvailable is false', async () => {
       vi.mocked(getDashboardStats).mockResolvedValue({
         totalMonetaryDonations: 0,
+        weeklyMonetaryTotal: 0,
+        monthlyMonetaryTotal: 0,
+        totalDonationCount: 0,
         totalPhysicalFulfilled: 0,
         totalPhysicalPending: 0,
         hasTransfersAvailable: false,

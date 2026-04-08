@@ -94,6 +94,7 @@ export type ProductForTransfer = {
 export interface FinancialSummary {
   weeklyTotal: number;
   monthlyTotal: number;
+  overallTotal: number;
 }
 
 export interface DonationRow {
@@ -165,7 +166,7 @@ export async function getFinancialSummary(): Promise<FinancialSummary> {
     const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
     const monthStart = startOfMonth(new Date());
 
-    const [weeklyResult, monthlyResult] = await Promise.all([
+    const [weeklyResult, monthlyResult, overallResult] = await Promise.all([
       db
         .select({ total: sum(donations.amount) })
         .from(donations)
@@ -184,17 +185,23 @@ export async function getFinancialSummary(): Promise<FinancialSummary> {
             gte(donations.createdAt, monthStart)
           )
         ),
+      db
+        .select({ total: sum(donations.amount) })
+        .from(donations)
+        .where(eq(donations.donationType, 'monetary')),
     ]);
 
     return {
       weeklyTotal: weeklyResult[0]?.total ? Number(weeklyResult[0].total) : 0,
       monthlyTotal: monthlyResult[0]?.total ? Number(monthlyResult[0].total) : 0,
+      overallTotal: overallResult[0]?.total ? Number(overallResult[0].total) : 0,
     };
   } catch (error) {
     console.error('[getFinancialSummary] Failed:', error);
     return {
       weeklyTotal: 0,
       monthlyTotal: 0,
+      overallTotal: 0,
     };
   }
 }

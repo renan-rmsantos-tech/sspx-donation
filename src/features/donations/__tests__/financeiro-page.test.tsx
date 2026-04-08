@@ -26,6 +26,7 @@ describe('Financeiro Page Integration Tests', () => {
       vi.mocked(getFinancialSummary).mockResolvedValue({
         weeklyTotal: 0,
         monthlyTotal: 0,
+        overallTotal: 0,
       });
       vi.mocked(getDonationsFiltered).mockResolvedValue({
         donations: [],
@@ -39,13 +40,14 @@ describe('Financeiro Page Integration Tests', () => {
       });
       render(Page);
 
-      expect(screen.getByRole('heading', { level: 1, name: 'Financeiro' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Doações' })).toBeInTheDocument();
     });
 
     it('should render page with default empty state', async () => {
       vi.mocked(getFinancialSummary).mockResolvedValue({
         weeklyTotal: 0,
         monthlyTotal: 0,
+        overallTotal: 0,
       });
       vi.mocked(getDonationsFiltered).mockResolvedValue({
         donations: [],
@@ -60,7 +62,7 @@ describe('Financeiro Page Integration Tests', () => {
       const result = render(Page);
 
       // Verify main heading is present
-      expect(screen.getByRole('heading', { level: 1, name: 'Financeiro' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Doações' })).toBeInTheDocument();
       // Verify page structure is rendered
       expect(result.container).toBeTruthy();
     });
@@ -69,6 +71,7 @@ describe('Financeiro Page Integration Tests', () => {
       vi.mocked(getFinancialSummary).mockResolvedValue({
         weeklyTotal: 0,
         monthlyTotal: 0,
+        overallTotal: 0,
       });
       vi.mocked(getDonationsFiltered).mockResolvedValue({
         donations: [],
@@ -86,7 +89,7 @@ describe('Financeiro Page Integration Tests', () => {
       render(Page);
 
       // Page should render without errors
-      expect(screen.getByRole('heading', { level: 1, name: 'Financeiro' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Doações' })).toBeInTheDocument();
     });
   });
 
@@ -95,6 +98,7 @@ describe('Financeiro Page Integration Tests', () => {
       vi.mocked(getFinancialSummary).mockResolvedValue({
         weeklyTotal: 2450,
         monthlyTotal: 12890.5,
+        overallTotal: 50000,
       });
       vi.mocked(getDonationsFiltered).mockResolvedValue({
         donations: [
@@ -132,6 +136,7 @@ describe('Financeiro Page Integration Tests', () => {
       vi.mocked(getFinancialSummary).mockResolvedValue({
         weeklyTotal: 0,
         monthlyTotal: 0,
+        overallTotal: 0,
       });
       vi.mocked(getDonationsFiltered).mockResolvedValue({
         donations: [],
@@ -145,7 +150,7 @@ describe('Financeiro Page Integration Tests', () => {
       });
       render(Page);
 
-      expect(screen.getByRole('heading', { level: 1, name: 'Financeiro' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Doações' })).toBeInTheDocument();
     });
 
     it('should render page with multiple donations', async () => {
@@ -179,6 +184,7 @@ describe('Financeiro Page Integration Tests', () => {
       vi.mocked(getFinancialSummary).mockResolvedValue({
         weeklyTotal: 2450,
         monthlyTotal: 12890.5,
+        overallTotal: 50000,
       });
       vi.mocked(getDonationsFiltered).mockResolvedValue({
         donations: mockDonations,
@@ -192,13 +198,14 @@ describe('Financeiro Page Integration Tests', () => {
       });
       render(Page);
 
-      expect(screen.getByRole('heading', { level: 1, name: 'Financeiro' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Doações' })).toBeInTheDocument();
     });
 
     it('should render page when donationType filter is provided', async () => {
       vi.mocked(getFinancialSummary).mockResolvedValue({
         weeklyTotal: 0,
         monthlyTotal: 0,
+        overallTotal: 0,
       });
       vi.mocked(getDonationsFiltered).mockResolvedValue({
         donations: [],
@@ -214,13 +221,14 @@ describe('Financeiro Page Integration Tests', () => {
       });
       render(Page);
 
-      expect(screen.getByRole('heading', { level: 1, name: 'Financeiro' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Doações' })).toBeInTheDocument();
     });
 
     it('should render page when pagination parameters provided', async () => {
       vi.mocked(getFinancialSummary).mockResolvedValue({
         weeklyTotal: 0,
         monthlyTotal: 0,
+        overallTotal: 0,
       });
       vi.mocked(getDonationsFiltered).mockResolvedValue({
         donations: [],
@@ -236,13 +244,14 @@ describe('Financeiro Page Integration Tests', () => {
       });
       render(Page);
 
-      expect(screen.getByRole('heading', { level: 1, name: 'Financeiro' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Doações' })).toBeInTheDocument();
     });
 
     it('should render page when date filters provided', async () => {
       vi.mocked(getFinancialSummary).mockResolvedValue({
         weeklyTotal: 0,
         monthlyTotal: 0,
+        overallTotal: 0,
       });
       vi.mocked(getDonationsFiltered).mockResolvedValue({
         donations: [],
@@ -262,13 +271,14 @@ describe('Financeiro Page Integration Tests', () => {
       });
       render(Page);
 
-      expect(screen.getByRole('heading', { level: 1, name: 'Financeiro' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Doações' })).toBeInTheDocument();
     });
 
     it('should render page when donor name search filter provided', async () => {
       vi.mocked(getFinancialSummary).mockResolvedValue({
         weeklyTotal: 0,
         monthlyTotal: 0,
+        overallTotal: 0,
       });
       vi.mocked(getDonationsFiltered).mockResolvedValue({
         donations: [],
@@ -284,7 +294,7 @@ describe('Financeiro Page Integration Tests', () => {
       });
       render(Page);
 
-      expect(screen.getByRole('heading', { level: 1, name: 'Financeiro' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Doações' })).toBeInTheDocument();
     });
   });
 
@@ -317,6 +327,7 @@ describe('Financeiro Page Integration Tests', () => {
       const mockSummary = {
         weeklyTotal: 5000,
         monthlyTotal: 25000,
+        overallTotal: 100000,
       };
 
       vi.mocked(getFinancialSummary).mockResolvedValue(mockSummary);
@@ -332,7 +343,7 @@ describe('Financeiro Page Integration Tests', () => {
       });
       render(Page);
 
-      expect(screen.getByRole('heading', { level: 1, name: 'Financeiro' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Doações' })).toBeInTheDocument();
     });
 
     it('accepts paginated donations with all required fields', async () => {
@@ -371,6 +382,7 @@ describe('Financeiro Page Integration Tests', () => {
       vi.mocked(getFinancialSummary).mockResolvedValue({
         weeklyTotal: 0,
         monthlyTotal: 0,
+        overallTotal: 0,
       });
       vi.mocked(getDonationsFiltered).mockResolvedValue(mockPaginatedDonations);
 
@@ -379,7 +391,7 @@ describe('Financeiro Page Integration Tests', () => {
       });
       render(Page);
 
-      expect(screen.getByRole('heading', { level: 1, name: 'Financeiro' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Doações' })).toBeInTheDocument();
     });
   });
 
@@ -388,6 +400,7 @@ describe('Financeiro Page Integration Tests', () => {
       vi.mocked(getFinancialSummary).mockResolvedValue({
         weeklyTotal: 0,
         monthlyTotal: 0,
+        overallTotal: 0,
       });
       vi.mocked(getDonationsFiltered).mockResolvedValue({
         donations: [],
@@ -403,7 +416,7 @@ describe('Financeiro Page Integration Tests', () => {
 
       // Navigation is handled at layout level
       // Verify page renders without navigation errors
-      expect(screen.getByRole('heading', { level: 1, name: 'Financeiro' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Doações' })).toBeInTheDocument();
     });
   });
 });

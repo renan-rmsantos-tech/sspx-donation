@@ -8,6 +8,9 @@ describe('DashboardStatsCards', () => {
       <DashboardStatsCards
         stats={{
           totalMonetaryDonations: 10000,
+          weeklyMonetaryTotal: 5000,
+          monthlyMonetaryTotal: 8000,
+          totalDonationCount: 10,
           totalPhysicalFulfilled: 1,
           totalPhysicalPending: 2,
           hasTransfersAvailable: false,
@@ -24,6 +27,9 @@ describe('DashboardStatsCards', () => {
       <DashboardStatsCards
         stats={{
           totalMonetaryDonations: 12345,
+          weeklyMonetaryTotal: 0,
+          monthlyMonetaryTotal: 0,
+          totalDonationCount: 1,
           totalPhysicalFulfilled: 0,
           totalPhysicalPending: 0,
           hasTransfersAvailable: false,
@@ -38,6 +44,9 @@ describe('DashboardStatsCards', () => {
       <DashboardStatsCards
         stats={{
           totalMonetaryDonations: 0,
+          weeklyMonetaryTotal: 0,
+          monthlyMonetaryTotal: 0,
+          totalDonationCount: 8,
           totalPhysicalFulfilled: 5,
           totalPhysicalPending: 3,
           hasTransfersAvailable: false,
@@ -48,34 +57,23 @@ describe('DashboardStatsCards', () => {
     expect(screen.getByText('3')).toBeInTheDocument();
   });
 
-  it('should show empty state when all metrics are zero', () => {
+  it('should render new weekly and monthly cards', () => {
     render(
       <DashboardStatsCards
         stats={{
           totalMonetaryDonations: 0,
+          weeklyMonetaryTotal: 5000,
+          monthlyMonetaryTotal: 10000,
+          totalDonationCount: 5,
           totalPhysicalFulfilled: 0,
           totalPhysicalPending: 0,
           hasTransfersAvailable: false,
         }}
       />
     );
-    expect(screen.getByTestId('dashboard-empty-state')).toBeInTheDocument();
-    expect(
-      screen.getByText(/Ainda não há dados de doações. As métricas aparecerão quando doações ou compromissos forem registrados./)
-    ).toBeInTheDocument();
-  });
-
-  it('should not show empty state when any metric has value', () => {
-    render(
-      <DashboardStatsCards
-        stats={{
-          totalMonetaryDonations: 1,
-          totalPhysicalFulfilled: 0,
-          totalPhysicalPending: 0,
-          hasTransfersAvailable: false,
-        }}
-      />
-    );
-    expect(screen.queryByTestId('dashboard-empty-state')).not.toBeInTheDocument();
+    expect(screen.getByText('Total da Semana')).toBeInTheDocument();
+    expect(screen.getByText('Total do Mês')).toBeInTheDocument();
+    expect(screen.getByText('Total de Doações')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
   });
 });
