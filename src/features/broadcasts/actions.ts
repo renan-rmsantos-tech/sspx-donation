@@ -7,7 +7,7 @@ import { db } from '@/lib/db';
 import { broadcasts } from '@/lib/db/schema';
 import { getSession } from '@/lib/auth/session';
 import { renderEmailHtml } from '@/features/donations/emails/layout';
-import { sendBroadcastSchema } from './schemas';
+import { sendBroadcastSchema, sendTestBroadcastSchema } from './schemas';
 import { getBroadcastRecipientEmails } from './queries';
 
 interface ActionResult<T> {
@@ -63,6 +63,8 @@ export async function sendBroadcastEmail(
     let successCount = 0;
     let failureCount = 0;
 
+    const bcc = validated.bccEmail ? [validated.bccEmail] : undefined;
+
     for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
       const batch = recipients.slice(i, i + BATCH_SIZE);
       const results = await Promise.allSettled(
@@ -70,6 +72,7 @@ export async function sendBroadcastEmail(
           resend.emails.send({
             from: fromAddress,
             to,
+            bcc,
             subject: validated.subject,
             html,
           })
@@ -114,6 +117,61 @@ export async function sendBroadcastEmail(
     };
   } catch (error) {
     console.error('sendBroadcastEmail error:', error);
+    if (error instanceof ZodError) {
+      return {
+        success: false,
+        error: 'VALIDATION_ERROR',
+        details: error.flatten(),
+      };
+    }
+    return { success: false, error: 'INTERNAL_ERROR' };
+  }
+}
+
+export async function sendTestBroadcastEmail(
+  input: unknown
+): Promise<ActionResult<{ to: string }>> {
+  try {
+    const session = await getSession();
+    if (!session.isAdmin) {
+      return { success: false, error: 'UNAUTHORIZED' };
+    }
+
+    const validated = sendTestBroadcastSchema.parse(input);
+
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.error('sendTestBroadcastEmail: RESEND_API_KEY is not configured');
+      return {
+        success: false,
+        error: 'INTERNAL_ERROR',
+        details: { message: 'Serviço de email não configurado.' },
+      };
+    }
+
+    const resend = new Resend(apiKey);
+    const fromAddress =
+      process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+    const html = renderEmailHtml({
+      subject: validated.subject,
+      bodyText: validated.message,
+    });
+
+    const result = await resend.emails.send({
+      from: fromAddress,
+      to: validated.testEmail,
+      subject: `[TESTE] ${validated.subject}`,
+      html,
+    });
+
+    if (result.error) {
+      console.error('sendTestBroadcastEmail send error:', result.error);
+      return { success: false, error: 'INTERNAL_ERROR' };
+    }
+
+    return { success: true, data: { to: validated.testEmail } };
+  } catch (error) {
+    console.error('sendTestBroadcastEmail error:', error);
     if (error instanceof ZodError) {
       return {
         success: false,
