@@ -20,12 +20,21 @@ function escapeHtml(value: string): string {
 interface RenderEmailOptions {
   subject: string;
   bodyText: string;
+  senderName?: string;
 }
 
-export function renderEmailHtml({ subject, bodyText }: RenderEmailOptions): string {
+export function renderEmailHtml({
+  subject,
+  bodyText,
+  senderName,
+}: RenderEmailOptions): string {
   const logoUrl = `${getSiteUrl()}/logo.png`;
   const safeSubject = escapeHtml(subject);
   const safeBody = escapeHtml(bodyText);
+  const trimmedSender = senderName?.trim();
+  const signatureHtml = trimmedSender
+    ? `<div style="margin-top:24px;padding-top:16px;border-top:1px solid #E5DFD4;color:#1E3D59;font-size:15px;line-height:1.5;font-family:Georgia,'Times New Roman',serif;font-style:italic;">Atenciosamente,<br /><strong style="font-style:normal;">${escapeHtml(trimmedSender)}</strong></div>`
+    : '';
 
   return `<!doctype html>
 <html lang="pt-BR">
@@ -49,6 +58,7 @@ export function renderEmailHtml({ subject, bodyText }: RenderEmailOptions): stri
               <td style="padding:32px 32px 8px 32px;">
                 <h1 style="margin:0 0 16px 0;color:#1E3D59;font-size:22px;line-height:1.3;font-weight:600;font-family:Georgia,'Times New Roman',serif;">${safeSubject}</h1>
                 <div style="color:#3D4F5F;font-size:16px;line-height:1.65;white-space:pre-wrap;">${safeBody}</div>
+                ${signatureHtml}
               </td>
             </tr>
             <tr>

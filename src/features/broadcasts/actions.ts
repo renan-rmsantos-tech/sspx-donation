@@ -58,6 +58,7 @@ export async function sendBroadcastEmail(
     const html = renderEmailHtml({
       subject: validated.subject,
       bodyText: validated.message,
+      senderName: validated.senderName,
     });
 
     let successCount = 0;
@@ -101,6 +102,7 @@ export async function sendBroadcastEmail(
         sentSuccessCount: successCount,
         sentFailureCount: failureCount,
         sentBy: session.username || 'unknown',
+        senderName: validated.senderName,
       })
       .returning({ id: broadcasts.id });
 
@@ -155,6 +157,7 @@ export async function sendTestBroadcastEmail(
     const html = renderEmailHtml({
       subject: validated.subject,
       bodyText: validated.message,
+      senderName: validated.senderName,
     });
 
     const result = await resend.emails.send({

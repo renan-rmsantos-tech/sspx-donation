@@ -7,6 +7,12 @@ const optionalEmail = z
   .optional()
   .or(z.literal('').transform(() => undefined));
 
+const senderNameSchema = z
+  .string()
+  .trim()
+  .min(1, 'Identificação do remetente é obrigatória')
+  .max(150, 'Remetente deve ter no máximo 150 caracteres');
+
 export const sendBroadcastSchema = z.object({
   subject: z
     .string()
@@ -16,6 +22,7 @@ export const sendBroadcastSchema = z.object({
     .string()
     .min(1, 'Mensagem é obrigatória')
     .max(5000, 'Mensagem deve ter no máximo 5000 caracteres'),
+  senderName: senderNameSchema,
   bccEmail: optionalEmail,
 });
 
@@ -28,6 +35,7 @@ export const sendTestBroadcastSchema = z.object({
     .string()
     .min(1, 'Mensagem é obrigatória')
     .max(5000, 'Mensagem deve ter no máximo 5000 caracteres'),
+  senderName: senderNameSchema,
   testEmail: z
     .string()
     .trim()

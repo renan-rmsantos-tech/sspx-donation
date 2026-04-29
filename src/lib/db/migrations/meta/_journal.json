@@ -64,6 +64,13 @@
       "when": 1777767716000,
       "tag": "0008_add_broadcasts_and_product_type",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1777939200000,
+      "tag": "0009_add_broadcast_sender_name",
+      "breakpoints": true
     }
   ]
 }

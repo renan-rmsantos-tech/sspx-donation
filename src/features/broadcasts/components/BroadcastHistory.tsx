@@ -39,6 +39,11 @@ export function BroadcastHistory({ items }: BroadcastHistoryProps) {
               <p className="mt-1 text-[13px] text-[#5A6D7E] whitespace-pre-wrap line-clamp-3">
                 {b.message}
               </p>
+              {b.senderName && (
+                <p className="mt-1 text-[12px] italic text-[#8A7A5C]">
+                  Assinado por {b.senderName}
+                </p>
+              )}
               <div className="mt-2 flex flex-wrap gap-2 text-[12px]">
                 <span className="rounded-full bg-[#EDF6EE] border border-[#9BC9A4] text-[#2D6A3F] px-3 py-[2px]">
                   {b.sentSuccessCount} enviados

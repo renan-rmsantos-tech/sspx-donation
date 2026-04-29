@@ -85,6 +85,7 @@ export const broadcasts = pgTable(
     sentSuccessCount: integer('sent_success_count').notNull(),
     sentFailureCount: integer('sent_failure_count').notNull().default(0),
     sentBy: text('sent_by').notNull(),
+    senderName: text('sender_name'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (t) => ({

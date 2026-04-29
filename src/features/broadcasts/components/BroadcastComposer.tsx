@@ -21,6 +21,7 @@ import { sendBroadcastEmail, sendTestBroadcastEmail } from '../actions';
 
 const SUBJECT_MAX = 150;
 const MESSAGE_MAX = 5000;
+const SENDER_NAME_MAX = 150;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface BroadcastComposerProps {
@@ -31,6 +32,7 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
   const router = useRouter();
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [senderName, setSenderName] = useState('');
   const [bccEmail, setBccEmail] = useState('');
   const [testEmail, setTestEmail] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -41,11 +43,13 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
     subject.trim().length > 0 && subject.length <= SUBJECT_MAX;
   const messageFilled =
     message.trim().length > 0 && message.length <= MESSAGE_MAX;
+  const senderNameFilled =
+    senderName.trim().length > 0 && senderName.length <= SENDER_NAME_MAX;
   const bccValid =
     bccEmail.trim().length === 0 || EMAIL_REGEX.test(bccEmail.trim());
   const testEmailValid = EMAIL_REGEX.test(testEmail.trim());
 
-  const isValid = subjectFilled && messageFilled && bccValid;
+  const isValid = subjectFilled && messageFilled && senderNameFilled && bccValid;
 
   const handleConfirmedSend = () => {
     setConfirmOpen(false);
@@ -53,6 +57,7 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
       const result = await sendBroadcastEmail({
         subject: subject.trim(),
         message: message.trim(),
+        senderName: senderName.trim(),
         bccEmail: bccEmail.trim() || undefined,
       });
 
@@ -69,6 +74,7 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
         }
         setSubject('');
         setMessage('');
+        setSenderName('');
         setBccEmail('');
         router.refresh();
       } else if (result.error === 'NO_RECIPIENTS') {
@@ -84,8 +90,10 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
   };
 
   const handleSendTest = () => {
-    if (!subjectFilled || !messageFilled) {
-      toast.error('Preencha assunto e mensagem antes de enviar o teste.');
+    if (!subjectFilled || !messageFilled || !senderNameFilled) {
+      toast.error(
+        'Preencha assunto, mensagem e remetente antes de enviar o teste.'
+      );
       return;
     }
     if (!testEmailValid) {
@@ -96,6 +104,7 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
       const result = await sendTestBroadcastEmail({
         subject: subject.trim(),
         message: message.trim(),
+        senderName: senderName.trim(),
         testEmail: testEmail.trim(),
       });
 
@@ -159,6 +168,27 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
           />
           <p className="text-xs text-[#999] mt-1 text-right">
             {message.length}/{MESSAGE_MAX}
+          </p>
+        </div>
+
+        <div>
+          <Label className="text-sm font-medium text-[#333]">
+            Quem está enviando
+          </Label>
+          <Input
+            value={senderName}
+            onChange={(e) =>
+              setSenderName(e.target.value.slice(0, SENDER_NAME_MAX))
+            }
+            placeholder="Ex.: Padre João Maria Ferreira da Costa, FSSPX."
+            className="mt-1"
+            disabled={isPending}
+          />
+          <p className="text-xs text-[#999] mt-1">
+            Aparecerá como assinatura no final do email enviado aos doadores.
+          </p>
+          <p className="text-xs text-[#999] mt-1 text-right">
+            {senderName.length}/{SENDER_NAME_MAX}
           </p>
         </div>
 
