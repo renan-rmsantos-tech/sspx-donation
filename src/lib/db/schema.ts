@@ -13,6 +13,7 @@ import { relations } from 'drizzle-orm';
 
 export const donationTypeEnum = pgEnum('donation_type', ['monetary', 'physical']);
 export const donationModeEnum = pgEnum('donation_mode', ['monetary', 'physical', 'both']);
+export const productTypeEnum = pgEnum('product_type', ['regular', 'scholarship']);
 
 export const categories = pgTable('categories', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -31,6 +32,7 @@ export const products = pgTable('products', {
   isPublished: boolean('is_published').default(true).notNull(),
   imagePath: text('image_path'), // Supabase Storage path for product photo
   donationMode: donationModeEnum('donation_mode').notNull().default('both'), // 'monetary', 'physical', or 'both'
+  productType: productTypeEnum('product_type').notNull().default('regular'), // 'regular' (general items) or 'scholarship'
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -72,6 +74,23 @@ export const pixSettings = pgTable('pix_settings', {
   copiaEColaCode: text('copia_e_cola_code'),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+export const broadcasts = pgTable(
+  'broadcasts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    subject: text('subject').notNull(),
+    message: text('message').notNull(),
+    recipientCount: integer('recipient_count').notNull(),
+    sentSuccessCount: integer('sent_success_count').notNull(),
+    sentFailureCount: integer('sent_failure_count').notNull().default(0),
+    sentBy: text('sent_by').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    createdAtIdx: index('broadcasts_created_at_idx').on(t.createdAt),
+  })
+);
 
 export const fundTransfers = pgTable(
   'fund_transfers',

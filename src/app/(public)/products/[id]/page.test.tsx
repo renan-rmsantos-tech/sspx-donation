@@ -55,6 +55,7 @@ const mockMonetaryProduct = {
   isPublished: true,
   imagePath: null,
   donationMode: 'both' as const,
+  productType: 'regular' as const,
   createdAt: new Date(),
   updatedAt: new Date(),
   productCategories: mockProductCategories,
@@ -70,6 +71,7 @@ const mockPhysicalProduct = {
   isPublished: true,
   imagePath: null,
   donationMode: 'both' as const,
+  productType: 'regular' as const,
   createdAt: new Date(),
   updatedAt: new Date(),
   productCategories: [

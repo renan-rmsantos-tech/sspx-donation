@@ -35,6 +35,7 @@ export default async function EditProductPage({
           isFulfilled: product.isFulfilled,
           isPublished: product.isPublished,
           donationMode: product.donationMode,
+          productType: product.productType,
           imagePath: product.imagePath,
           productCategories: product.productCategories,
         }}

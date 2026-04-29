@@ -57,6 +57,13 @@
       "when": 1775604655534,
       "tag": "0007_useful_otto_octavius",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777767716000,
+      "tag": "0008_add_broadcasts_and_product_type",
+      "breakpoints": true
     }
   ]
 }

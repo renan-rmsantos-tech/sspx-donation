@@ -81,6 +81,7 @@ export async function createProduct(
         isPublished: validated.isPublished ?? true,
         imagePath: validated.imagePath ?? undefined,
         donationMode: validated.donationMode ?? 'both',
+        productType: validated.productType ?? 'regular',
       })
       .returning({ id: products.id });
 
@@ -164,6 +165,7 @@ export async function updateProduct(
       }
     }
     if (validated.donationMode !== undefined) updates.donationMode = validated.donationMode;
+    if (validated.productType !== undefined) updates.productType = validated.productType;
 
     await db.update(products).set(updates).where(eq(products.id, id));
 

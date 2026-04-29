@@ -24,6 +24,7 @@ import {
 import { generateStoragePath } from '@/lib/utils/format';
 import { validateSession, getSession } from '@/lib/auth/session';
 import { sendDonationConfirmation } from './notifications';
+import { renderEmailHtml } from './emails/layout';
 
 interface ActionResult<T> {
   success: boolean;
@@ -606,14 +607,10 @@ export async function sendThankYouEmail(
       from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
       to: validated.donorEmail,
       subject: validated.subject,
-      html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-          <h2 style="color: #1E3D59; margin-bottom: 16px;">${validated.subject}</h2>
-          <p style="color: #333; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">${validated.message}</p>
-          <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 24px 0;" />
-          <p style="color: #9B7B5A; font-size: 14px;">Colégio São José — Campanha de Doações</p>
-        </div>
-      `,
+      html: renderEmailHtml({
+        subject: validated.subject,
+        bodyText: validated.message,
+      }),
     });
 
     if (error) {

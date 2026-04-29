@@ -1,9 +1,21 @@
 import Link from 'next/link';
-import { getPublishedProducts, getProductsByCategory } from '@/features/products/queries';
+import {
+  getPublishedRegularProducts,
+  getPublishedScholarshipProducts,
+  getRegularProductsByCategory,
+} from '@/features/products/queries';
 import { getCategories } from '@/features/categories/queries';
 import { ProductGrid } from '@/features/products/components/ProductGrid';
+import { ProductsStatusTabs } from '@/features/products/components/ProductsStatusTabs';
 import { PublicNav } from './components/PublicNav';
 import { PublicFooter } from './components/PublicFooter';
+import type { products as productsTable } from '@/lib/db/schema';
+
+type Product = typeof productsTable.$inferSelect & {
+  productCategories: Array<{
+    categories: { id: string; name: string };
+  }>;
+};
 
 interface CatalogPageProps {
   searchParams: Promise<{ category?: string }>;
@@ -12,21 +24,28 @@ interface CatalogPageProps {
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const { category: categoryId } = await searchParams;
 
-  const [categories, rawProducts] = await Promise.all([
+  const [categories, regularProducts, scholarshipProducts] = await Promise.all([
     getCategories(),
     categoryId
-      ? getProductsByCategory(categoryId)
-      : getPublishedProducts(),
+      ? getRegularProductsByCategory(categoryId)
+      : getPublishedRegularProducts(),
+    getPublishedScholarshipProducts(),
   ]);
 
-  const isGoalReached = (p: (typeof rawProducts)[number]) =>
+  const isGoalReached = (p: Product) =>
     p.isFulfilled || (p.targetAmount != null && p.currentAmount >= p.targetAmount);
 
-  const products = [...rawProducts].sort((a, b) => {
-    const aReached = isGoalReached(a) ? 1 : 0;
-    const bReached = isGoalReached(b) ? 1 : 0;
-    return aReached - bReached;
-  });
+  const splitByStatus = (items: Product[]) => {
+    const pending: Product[] = [];
+    const achieved: Product[] = [];
+    for (const p of items) {
+      (isGoalReached(p) ? achieved : pending).push(p);
+    }
+    return { pending, achieved };
+  };
+
+  const regular = splitByStatus(regularProducts);
+  const scholarship = splitByStatus(scholarshipProducts);
 
   return (
     <>
@@ -39,14 +58,9 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           id="mensagem"
           className="relative scroll-mt-[188px] pt-9 pb-10 border-b border-[#D4C4A8] overflow-hidden"
         >
-          {/* Marca d'água */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] h-[510px] opacity-[0.06] pointer-events-none" aria-hidden="true">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo-fsspx.png"
-              alt=""
-              className="w-full h-full object-contain"
-            />
+            <img src="/logo-fsspx.png" alt="" className="w-full h-full object-contain" />
           </div>
 
           <h2 className="font-serif font-bold text-[28px] leading-[34px] text-[#B8952E] mb-5">
@@ -66,7 +80,6 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
               do nosso Brasil.
             </p>
 
-            {/* Blockquote */}
             <div className="rounded-tr-[8px] rounded-br-[8px] py-3 px-5 bg-[#E8EEF4] border-l-[3px] border-l-[#B8952E]">
               <p className="font-serif font-normal italic text-[15px] leading-[1.65] text-[#1E3D59] m-0">
                 &ldquo;Há quem dá liberalmente e se torna mais rico; há quem retém mais do que é justo e
@@ -82,7 +95,6 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
               dinheiro ou com o bem físico.
             </p>
 
-            {/* Assinatura */}
             <div className="pt-[6px]">
               <p className="text-[15px] leading-[18px] text-[#3D4F5F] m-0">
                 Muito obrigado — Que Deus os abençoe
@@ -97,46 +109,68 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           </div>
         </section>
 
-        {/* ── Produtos ─────────────────────────────── */}
-        <section id="doacoes" className="scroll-mt-[188px] pt-10">
-          {(() => {
-          const fulfilledCount = products.filter(isGoalReached).length;
-          const pendingCount = products.length - fulfilledCount;
-            return (
-              <div className="flex items-baseline gap-[14px] mb-5">
-                <h2 className="font-serif font-bold text-[28px] leading-[34px] text-[#B8952E]">
-                  Itens para doação
+        {/* ── Bolsas de Estudo ─────────────────────────────── */}
+        {scholarshipProducts.length > 0 && (
+          <section
+            id="bolsas"
+            className="scroll-mt-[188px] pt-10 pb-2"
+          >
+            <div className="rounded-[14px] border border-[#C5A572] bg-gradient-to-br from-[#FBF6EC] to-[#F5EDDB] p-7 md:p-8">
+              <div className="flex items-baseline gap-3 mb-2 flex-wrap">
+                <span className="inline-flex items-center gap-2 px-3 py-[3px] rounded-full bg-[#1E3D59] text-[#F8F6F1] text-[11px] uppercase tracking-[1.4px]">
+                  Destaque
+                </span>
+                <h2 className="font-serif font-bold text-[28px] leading-[34px] text-[#1E3D59]">
+                  Bolsas de Estudo
                 </h2>
                 <span className="text-[13px] text-[#6B7D8E]">
-                  {products.length}{' '}
-                  {products.length === 1 ? 'item disponível' : 'itens disponíveis'}
+                  {scholarshipProducts.length}{' '}
+                  {scholarshipProducts.length === 1 ? 'bolsa' : 'bolsas'} disponível(is)
                 </span>
-
-                {products.length > 0 && (
-                  <>
-                    <span className="self-center w-px h-[14px] bg-[#CBD5DF] flex-shrink-0" />
-
-                    <span className="self-center flex items-center gap-[5px] px-[10px] py-[3px] bg-[#FBF3E2] border border-[#E2C97E] rounded-full flex-shrink-0">
-                      <span className="w-[6px] h-[6px] rounded-full bg-[#C9952A] flex-shrink-0" />
-                      <span className="text-[12px] font-medium text-[#8A6A1A] leading-none">
-                        {pendingCount}{' '}
-                        {pendingCount === 1 ? 'pendente' : 'pendentes'}
-                      </span>
-                    </span>
-
-                    <span className="self-center flex items-center gap-[5px] px-[10px] py-[3px] bg-[#EDF6EE] border border-[#9BC9A4] rounded-full flex-shrink-0">
-                      <span className="w-[6px] h-[6px] rounded-full bg-[#3A8A4E] flex-shrink-0" />
-                      <span className="text-[12px] font-medium text-[#2D6A3F] leading-none">
-                        {fulfilledCount}{' '}
-                        {fulfilledCount === 1 ? 'atingido' : 'atingidos'}
-                      </span>
-                    </span>
-                  </>
-                )}
               </div>
-            );
-          })()}
+              <p className="text-[15px] leading-[1.6] text-[#3D4F5F] mb-6 max-w-3xl">
+                Sua contribuição garante a permanência de alunos no colégio. Apoie diretamente a
+                formação de uma criança.
+              </p>
 
+              {scholarship.pending.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-[12px] uppercase tracking-[1.4px] text-[#8A6A1A] mb-3">
+                    Em campanha
+                  </h3>
+                  <ProductGrid
+                    products={scholarship.pending}
+                    emptyMessage="Nenhuma bolsa em campanha."
+                  />
+                </div>
+              )}
+
+              {scholarship.achieved.length > 0 && (
+                <div>
+                  <h3 className="text-[12px] uppercase tracking-[1.4px] text-[#2D6A3F] mb-3">
+                    Bolsas já contempladas
+                  </h3>
+                  <ProductGrid
+                    products={scholarship.achieved}
+                    emptyMessage=""
+                  />
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* ── Produtos ─────────────────────────────── */}
+        <section id="doacoes" className="scroll-mt-[188px] pt-10">
+          <div className="flex items-baseline gap-[14px] mb-5 flex-wrap">
+            <h2 className="font-serif font-bold text-[28px] leading-[34px] text-[#B8952E]">
+              Itens para doação
+            </h2>
+            <span className="text-[13px] text-[#6B7D8E]">
+              {regularProducts.length}{' '}
+              {regularProducts.length === 1 ? 'item disponível' : 'itens disponíveis'}
+            </span>
+          </div>
 
           {categories.length > 0 && (
             <div className="mb-7">
@@ -171,16 +205,26 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             </div>
           )}
 
-          <ProductGrid
-            products={products}
-            emptyMessage={
-              categoryId
-                ? 'Nenhum produto encontrado nesta categoria.'
-                : 'Nenhum produto disponível no momento.'
-            }
-          />
+          {regularProducts.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                {categoryId
+                  ? 'Nenhum produto encontrado nesta categoria.'
+                  : 'Nenhum produto disponível no momento.'}
+              </p>
+            </div>
+          ) : (
+            <ProductsStatusTabs
+              pending={regular.pending}
+              achieved={regular.achieved}
+              emptyMessageBase={
+                categoryId
+                  ? 'Nenhum produto nesta categoria'
+                  : 'Nenhum produto'
+              }
+            />
+          )}
         </section>
-
 
       </main>
 

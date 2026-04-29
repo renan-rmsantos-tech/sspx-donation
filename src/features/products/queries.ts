@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { products, productCategories, categories } from '@/lib/db/schema';
+import { products, productCategories } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 export async function getPublishedProducts() {
@@ -19,6 +19,44 @@ export async function getPublishedProducts() {
     return result;
   } catch (error) {
     console.error('getPublishedProducts error:', error);
+    return [];
+  }
+}
+
+export async function getPublishedRegularProducts() {
+  try {
+    return await db.query.products.findMany({
+      where: and(
+        eq(products.isPublished, true),
+        eq(products.productType, 'regular')
+      ),
+      with: {
+        productCategories: {
+          with: { categories: true },
+        },
+      },
+    });
+  } catch (error) {
+    console.error('getPublishedRegularProducts error:', error);
+    return [];
+  }
+}
+
+export async function getPublishedScholarshipProducts() {
+  try {
+    return await db.query.products.findMany({
+      where: and(
+        eq(products.isPublished, true),
+        eq(products.productType, 'scholarship')
+      ),
+      with: {
+        productCategories: {
+          with: { categories: true },
+        },
+      },
+    });
+  } catch (error) {
+    console.error('getPublishedScholarshipProducts error:', error);
     return [];
   }
 }
@@ -79,6 +117,30 @@ export async function getPublishedProductById(id: string) {
   }
 }
 
+export async function getRegularProductsByCategory(categoryId: string) {
+  try {
+    const result = await db.query.productCategories.findMany({
+      where: eq(productCategories.categoryId, categoryId),
+      with: {
+        products: {
+          with: {
+            productCategories: {
+              with: { categories: true },
+            },
+          },
+        },
+      },
+    });
+
+    return result
+      .map((pc) => pc.products)
+      .filter((p) => p.isPublished && p.productType === 'regular');
+  } catch (error) {
+    console.error('getRegularProductsByCategory error:', error);
+    return [];
+  }
+}
+
 export async function getProductsByCategory(categoryId: string) {
   try {
     const result = await db.query.productCategories.findMany({
@@ -104,3 +166,4 @@ export async function getProductsByCategory(categoryId: string) {
     return [];
   }
 }
+

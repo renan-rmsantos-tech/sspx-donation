@@ -44,6 +44,7 @@ const productFormSchema = z
     isPublished: z.boolean(),
     categoryIds: z.array(z.string()),
     donationMode: z.enum(['monetary', 'physical', 'both']).default('both'),
+    productType: z.enum(['regular', 'scholarship']).default('regular'),
   })
   .refine(
     (data) => parseBRLToNumber(data.targetAmountDisplay) > 0,
@@ -72,6 +73,7 @@ type ProductFormProps = {
     isPublished: boolean;
     imagePath?: string | null;
     donationMode?: 'monetary' | 'physical' | 'both';
+    productType?: 'regular' | 'scholarship';
     productCategories?: { categoryId: string }[];
   };
   imageUrl?: string | null;
@@ -96,6 +98,7 @@ export function ProductForm({ categories, product, imageUrl }: ProductFormProps)
       isPublished: product?.isPublished ?? true,
       categoryIds: product?.productCategories?.map((pc) => pc.categoryId) ?? [],
       donationMode: product?.donationMode ?? 'both',
+      productType: product?.productType ?? 'regular',
     },
   });
 
@@ -166,6 +169,7 @@ export function ProductForm({ categories, product, imageUrl }: ProductFormProps)
         isPublished: values.isPublished,
         categoryIds: values.categoryIds,
         donationMode: values.donationMode,
+        productType: values.productType,
       };
 
       if (imagePath !== undefined) {
@@ -318,6 +322,31 @@ export function ProductForm({ categories, product, imageUrl }: ProductFormProps)
                     <SelectItem value="both">Dinheiro ou Material</SelectItem>
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="productType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo de Produto</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="regular">Item regular</SelectItem>
+                    <SelectItem value="scholarship">Bolsa de estudo</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  Bolsas de estudo aparecem em uma seção dedicada na página inicial.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
