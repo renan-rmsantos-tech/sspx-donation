@@ -68,6 +68,11 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 
           {/* Header */}
           <div className="px-8 pt-8 pb-6 border-b border-[#E4DDD1]">
+            {product.productType === 'scholarship' && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-[3px] rounded-full bg-[#1E3D59] text-[#F8F6F1] text-[11px] uppercase tracking-[0.14em] mb-3">
+                Bolsa de Estudo
+              </span>
+            )}
             <h1 className="font-serif font-bold text-[32px] leading-[1.2] tracking-[-0.02em] text-[#2C4A5A] mb-2">
               {product.name}
             </h1>
