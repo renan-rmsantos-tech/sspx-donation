@@ -109,57 +109,6 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           </div>
         </section>
 
-        {/* ── Bolsas de Estudo ─────────────────────────────── */}
-        {scholarshipProducts.length > 0 && (
-          <section
-            id="bolsas"
-            className="scroll-mt-[188px] pt-10 pb-2"
-          >
-            <div className="rounded-[14px] border border-[#C5A572] bg-gradient-to-br from-[#FBF6EC] to-[#F5EDDB] p-7 md:p-8">
-              <div className="flex items-baseline gap-3 mb-2 flex-wrap">
-                <span className="inline-flex items-center gap-2 px-3 py-[3px] rounded-full bg-[#1E3D59] text-[#F8F6F1] text-[11px] uppercase tracking-[1.4px]">
-                  Destaque
-                </span>
-                <h2 className="font-serif font-bold text-[28px] leading-[34px] text-[#1E3D59]">
-                  Bolsas de Estudo
-                </h2>
-                <span className="text-[13px] text-[#6B7D8E]">
-                  {scholarshipProducts.length}{' '}
-                  {scholarshipProducts.length === 1 ? 'bolsa' : 'bolsas'} disponível(is)
-                </span>
-              </div>
-              <p className="text-[15px] leading-[1.6] text-[#3D4F5F] mb-6 max-w-3xl">
-                Sua contribuição garante a permanência de alunos no colégio. Apoie diretamente a
-                formação de uma criança.
-              </p>
-
-              {scholarship.pending.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-[12px] uppercase tracking-[1.4px] text-[#8A6A1A] mb-3">
-                    Em campanha
-                  </h3>
-                  <ProductGrid
-                    products={scholarship.pending}
-                    emptyMessage="Nenhuma bolsa em campanha."
-                  />
-                </div>
-              )}
-
-              {scholarship.achieved.length > 0 && (
-                <div>
-                  <h3 className="text-[12px] uppercase tracking-[1.4px] text-[#2D6A3F] mb-3">
-                    Bolsas já contempladas
-                  </h3>
-                  <ProductGrid
-                    products={scholarship.achieved}
-                    emptyMessage=""
-                  />
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
         {/* ── Produtos ─────────────────────────────── */}
         <section id="doacoes" className="scroll-mt-[188px] pt-10">
           <div className="flex items-baseline gap-[14px] mb-5 flex-wrap">
@@ -225,6 +174,57 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             />
           )}
         </section>
+
+        {/* ── Bolsas de Estudo ─────────────────────────────── */}
+        {scholarshipProducts.length > 0 && (
+          <section
+            id="bolsas"
+            className="scroll-mt-[188px] pt-10 pb-2"
+          >
+            <div className="rounded-[14px] border border-[#C5A572] bg-gradient-to-br from-[#FBF6EC] to-[#F5EDDB] p-7 md:p-8">
+              <div className="flex items-baseline gap-3 mb-2 flex-wrap">
+                <span className="inline-flex items-center gap-2 px-3 py-[3px] rounded-full bg-[#1E3D59] text-[#F8F6F1] text-[11px] uppercase tracking-[1.4px]">
+                  Destaque
+                </span>
+                <h2 className="font-serif font-bold text-[28px] leading-[34px] text-[#1E3D59]">
+                  Bolsas de Estudo
+                </h2>
+                <span className="text-[13px] text-[#6B7D8E]">
+                  {scholarshipProducts.length}{' '}
+                  {scholarshipProducts.length === 1 ? 'bolsa' : 'bolsas'} disponível(is)
+                </span>
+              </div>
+              <p className="text-[15px] leading-[1.6] text-[#3D4F5F] mb-6 max-w-3xl">
+                Sua contribuição garante a permanência de alunos no colégio. Apoie diretamente a
+                formação de uma criança.
+              </p>
+
+              {scholarship.pending.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-[12px] uppercase tracking-[1.4px] text-[#8A6A1A] mb-3">
+                    Em campanha
+                  </h3>
+                  <ProductGrid
+                    products={scholarship.pending}
+                    emptyMessage="Nenhuma bolsa em campanha."
+                  />
+                </div>
+              )}
+
+              {scholarship.achieved.length > 0 && (
+                <div>
+                  <h3 className="text-[12px] uppercase tracking-[1.4px] text-[#2D6A3F] mb-3">
+                    Bolsas já contempladas
+                  </h3>
+                  <ProductGrid
+                    products={scholarship.achieved}
+                    emptyMessage=""
+                  />
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
       </main>
 
