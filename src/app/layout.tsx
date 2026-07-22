@@ -24,6 +24,11 @@ export const metadata: Metadata = {
   },
 };
 
+// O app depende do banco em runtime (catálogo/doações ao vivo, admin). Forçamos
+// renderização dinâmica para o Next não tentar pré-renderizar páginas no build
+// — durante o `docker build` o Postgres ainda não está acessível.
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({
   children,
 }: {
