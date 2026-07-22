@@ -4,12 +4,12 @@ out/
 build/
 
 # Environment
-.env.local
-.env.*.local
+.env
+.env.*
+!.env.example
 
 # Dependencies
 node_modules/
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
