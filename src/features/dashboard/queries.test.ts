@@ -4,13 +4,7 @@ import { getDashboardStats } from './queries';
 
 vi.mock('@/lib/db', () => ({
   db: {
-    select: vi.fn().mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          groupBy: vi.fn().mockResolvedValue([]),
-        }),
-      }),
-    }),
+    select: vi.fn(),
     query: {
       products: {
         findMany: vi.fn().mockResolvedValue([]),
@@ -18,6 +12,33 @@ vi.mock('@/lib/db', () => ({
     },
   },
 }));
+
+/**
+ * getDashboardStats issues, in order:
+ *   1. monetary total  -> select().from().where()
+ *   2. weekly total    -> select().from().where()
+ *   3. monthly total   -> select().from().where()
+ *   4. donation count  -> select().from()            (awaited directly, no where)
+ *   5. physical counts -> select().from().where().groupBy()
+ * plus db.query.products.findMany() for hasTransfersAvailable.
+ */
+function mockStats(db, { monetary = [{ total: null }], physical = [] } = {}) {
+  const totalOnly = (rows) => ({
+    from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(rows) }),
+  });
+  vi.mocked(db.select)
+    .mockReturnValueOnce(totalOnly(monetary))
+    .mockReturnValueOnce(totalOnly([{ total: null }]))
+    .mockReturnValueOnce(totalOnly([{ total: null }]))
+    .mockReturnValueOnce({ from: vi.fn().mockResolvedValue([{ total: 0 }]) })
+    .mockReturnValueOnce({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          groupBy: vi.fn().mockResolvedValue(physical),
+        }),
+      }),
+    });
+}
 
 describe('getDashboardStats', () => {
   beforeEach(async () => {
@@ -29,19 +50,7 @@ describe('getDashboardStats', () => {
   describe('monetary aggregation', () => {
     it('should sum total monetary donations across all monetary donations', async () => {
       const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: 15000 }]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue([]),
-            }),
-          }),
-        });
+      mockStats(db, { monetary: [{ total: 15000 }] });
 
       const result = await getDashboardStats();
 
@@ -51,22 +60,13 @@ describe('getDashboardStats', () => {
 
     it('should aggregate multiple monetary donations across products', async () => {
       const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: 50000 }]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue([
-                { isFulfilled: false, count: 2 },
-                { isFulfilled: true, count: 1 },
-              ]),
-            }),
-          }),
-        });
+      mockStats(db, {
+        monetary: [{ total: 50000 }],
+        physical: [
+          { isFulfilled: false, count: 2 },
+          { isFulfilled: true, count: 1 },
+        ],
+      });
 
       const result = await getDashboardStats();
 
@@ -77,19 +77,7 @@ describe('getDashboardStats', () => {
 
     it('should return 0 when no monetary donations exist', async () => {
       const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: null }]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue([]),
-            }),
-          }),
-        });
+      mockStats(db, { monetary: [{ total: null }] });
 
       const result = await getDashboardStats();
 
@@ -98,19 +86,7 @@ describe('getDashboardStats', () => {
 
     it('should handle sum returning null (empty donations table)', async () => {
       const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue([]),
-            }),
-          }),
-        });
+      mockStats(db, { monetary: [] });
 
       const result = await getDashboardStats();
 
@@ -121,22 +97,13 @@ describe('getDashboardStats', () => {
   describe('physical fulfilled/pending counts', () => {
     it('should count physical products by fulfillment status', async () => {
       const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: 0 }]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue([
-                { isFulfilled: true, count: 3 },
-                { isFulfilled: false, count: 5 },
-              ]),
-            }),
-          }),
-        });
+      mockStats(db, {
+        monetary: [{ total: 0 }],
+        physical: [
+          { isFulfilled: true, count: 3 },
+          { isFulfilled: false, count: 5 },
+        ],
+      });
 
       const result = await getDashboardStats();
 
@@ -146,19 +113,10 @@ describe('getDashboardStats', () => {
 
     it('should return 0 for fulfilled when no physical products are fulfilled', async () => {
       const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: 0 }]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue([{ isFulfilled: false, count: 4 }]),
-            }),
-          }),
-        });
+      mockStats(db, {
+        monetary: [{ total: 0 }],
+        physical: [{ isFulfilled: false, count: 4 }],
+      });
 
       const result = await getDashboardStats();
 
@@ -168,19 +126,10 @@ describe('getDashboardStats', () => {
 
     it('should return 0 for pending when all physical products are fulfilled', async () => {
       const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: 0 }]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue([{ isFulfilled: true, count: 2 }]),
-            }),
-          }),
-        });
+      mockStats(db, {
+        monetary: [{ total: 0 }],
+        physical: [{ isFulfilled: true, count: 2 }],
+      });
 
       const result = await getDashboardStats();
 
@@ -190,19 +139,7 @@ describe('getDashboardStats', () => {
 
     it('should return 0 for both when no physical products exist', async () => {
       const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: 0 }]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue([]),
-            }),
-          }),
-        });
+      mockStats(db, { monetary: [{ total: 0 }], physical: [] });
 
       const result = await getDashboardStats();
 
@@ -214,45 +151,19 @@ describe('getDashboardStats', () => {
   describe('edge cases', () => {
     it('should return zeros when no products and no donations', async () => {
       const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: null }]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue([]),
-            }),
-          }),
-        });
+      mockStats(db, { monetary: [{ total: null }], physical: [] });
 
       const result = await getDashboardStats();
 
-      expect(result).toEqual({
-        totalMonetaryDonations: 0,
-        totalPhysicalFulfilled: 0,
-        totalPhysicalPending: 0,
-        hasTransfersAvailable: false,
-      });
+      expect(result.totalMonetaryDonations).toBe(0);
+      expect(result.totalPhysicalFulfilled).toBe(0);
+      expect(result.totalPhysicalPending).toBe(0);
+      expect(result.hasTransfersAvailable).toBe(false);
     });
 
     it('should handle mixed dataset: monetary only', async () => {
       const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: 25000 }]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue([]),
-            }),
-          }),
-        });
+      mockStats(db, { monetary: [{ total: 25000 }], physical: [] });
 
       const result = await getDashboardStats();
 
@@ -263,22 +174,13 @@ describe('getDashboardStats', () => {
 
     it('should handle mixed dataset: physical only', async () => {
       const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: null }]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue([
-                { isFulfilled: true, count: 1 },
-                { isFulfilled: false, count: 2 },
-              ]),
-            }),
-          }),
-        });
+      mockStats(db, {
+        monetary: [{ total: null }],
+        physical: [
+          { isFulfilled: true, count: 1 },
+          { isFulfilled: false, count: 2 },
+        ],
+      });
 
       const result = await getDashboardStats();
 
@@ -289,7 +191,10 @@ describe('getDashboardStats', () => {
 
     it('should return zeros on database error', async () => {
       const { db } = await import('@/lib/db');
-      vi.mocked(db.select).mockReturnValueOnce({
+      // Every db.select() call in the Promise.all must return a consumable
+      // (rejecting) chain — otherwise a later call throws synchronously and
+      // orphans an earlier rejected promise as an unhandled rejection.
+      vi.mocked(db.select).mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockRejectedValue(new Error('DB connection failed')),
         }),
@@ -299,6 +204,9 @@ describe('getDashboardStats', () => {
 
       expect(result).toEqual({
         totalMonetaryDonations: 0,
+        weeklyMonetaryTotal: 0,
+        monthlyMonetaryTotal: 0,
+        totalDonationCount: 0,
         totalPhysicalFulfilled: 0,
         totalPhysicalPending: 0,
         hasTransfersAvailable: false,
@@ -309,22 +217,13 @@ describe('getDashboardStats', () => {
   describe('consistency with product/donation semantics', () => {
     it('should reflect product isFulfilled for physical counts', async () => {
       const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: 0 }]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue([
-                { isFulfilled: true, count: 1 },
-                { isFulfilled: false, count: 1 },
-              ]),
-            }),
-          }),
-        });
+      mockStats(db, {
+        monetary: [{ total: 0 }],
+        physical: [
+          { isFulfilled: true, count: 1 },
+          { isFulfilled: false, count: 1 },
+        ],
+      });
 
       const result = await getDashboardStats();
 
@@ -334,19 +233,7 @@ describe('getDashboardStats', () => {
 
     it('should use donations.amount for monetary total (not product.currentAmount)', async () => {
       const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: 100000 }]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue([]),
-            }),
-          }),
-        });
+      mockStats(db, { monetary: [{ total: 100000 }] });
 
       const result = await getDashboardStats();
 
@@ -355,26 +242,9 @@ describe('getDashboardStats', () => {
   });
 
   describe('hasTransfersAvailable', () => {
-    const makeSelectMocks = async () => {
-      const { db } = await import('@/lib/db');
-      vi.mocked(db.select)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: 0 }]),
-          }),
-        })
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              groupBy: vi.fn().mockResolvedValue([]),
-            }),
-          }),
-        });
-      return db;
-    };
-
     it('should return true when a monetary product has surplus and 2+ non-fulfilled targets exist', async () => {
-      const db = await makeSelectMocks();
+      const { db } = await import('@/lib/db');
+      mockStats(db, { monetary: [{ total: 0 }] });
       vi.mocked(db.query.products.findMany).mockResolvedValue([
         {
           id: 'p1',
@@ -408,7 +278,8 @@ describe('getDashboardStats', () => {
     });
 
     it('should return false when monetary product has surplus but fewer than 2 non-fulfilled targets', async () => {
-      const db = await makeSelectMocks();
+      const { db } = await import('@/lib/db');
+      mockStats(db, { monetary: [{ total: 0 }] });
       vi.mocked(db.query.products.findMany).mockResolvedValue([
         {
           id: 'p1',
@@ -434,7 +305,8 @@ describe('getDashboardStats', () => {
     });
 
     it('should return false when no monetary product has surplus (currentAmount <= targetAmount)', async () => {
-      const db = await makeSelectMocks();
+      const { db } = await import('@/lib/db');
+      mockStats(db, { monetary: [{ total: 0 }] });
       vi.mocked(db.query.products.findMany).mockResolvedValue([
         {
           id: 'p1',
@@ -468,7 +340,8 @@ describe('getDashboardStats', () => {
     });
 
     it('should return false when only physical donation mode products exist (no monetary surplus)', async () => {
-      const db = await makeSelectMocks();
+      const { db } = await import('@/lib/db');
+      mockStats(db, { monetary: [{ total: 0 }] });
       vi.mocked(db.query.products.findMany).mockResolvedValue([
         {
           id: 'p1',
@@ -494,7 +367,8 @@ describe('getDashboardStats', () => {
     });
 
     it('should return false when monetary product has surplus but targetAmount is null', async () => {
-      const db = await makeSelectMocks();
+      const { db } = await import('@/lib/db');
+      mockStats(db, { monetary: [{ total: 0 }] });
       vi.mocked(db.query.products.findMany).mockResolvedValue([
         {
           id: 'p1',

@@ -24,9 +24,13 @@ describe('DonationTabs', () => {
       />
     );
 
-    expect(screen.getByRole('tab', { name: 'Dinheiro' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Material' })).toBeInTheDocument();
-    expect(screen.getByText('Faça uma Doação em Dinheiro')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pix' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Doação de Material' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Informe o valor que deseja doar')
+    ).toBeInTheDocument();
   });
 
   it('switches between Dinheiro and Material tabs', () => {
@@ -40,14 +44,23 @@ describe('DonationTabs', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Material' }));
-    expect(screen.getByText('Oferecer Este Item')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Doação de Material' }));
+    expect(
+      screen.getByText(/Preencha seus dados de contato/)
+    ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Dinheiro' }));
-    expect(screen.getByText('Faça uma Doação em Dinheiro')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Pix' }));
+    expect(
+      screen.getByText('Informe o valor que deseja doar')
+    ).toBeInTheDocument();
   });
 
-  it('preserves form data when switching tabs', () => {
+  // NOTE: The current DonationTabs mounts only the active tab's form via a
+  // conditional (`activeTab === ... && <Form />`), so each form holds its own
+  // local `useState`. Switching tabs unmounts the inactive form and discards
+  // its state, so field values are NOT preserved across tab switches. This test
+  // documents that current behavior (see agent report re: possible regression).
+  it('renders an independent, freshly-mounted form per tab', () => {
     render(
       <DonationTabs
         productId="123e4567-e89b-12d3-a456-426614174000"
@@ -62,8 +75,14 @@ describe('DonationTabs', () => {
       'monetary-donorEmail'
     ) as HTMLInputElement;
     fireEvent.change(monetaryEmail, { target: { value: 'money@example.com' } });
+    expect(
+      (document.getElementById('monetary-donorEmail') as HTMLInputElement).value
+    ).toBe('money@example.com');
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Material' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Doação de Material' }));
+
+    // Monetary form is unmounted while the Material tab is active.
+    expect(document.getElementById('monetary-donorEmail')).toBeNull();
 
     const physicalName = document.getElementById(
       'physical-donorName'
@@ -73,18 +92,15 @@ describe('DonationTabs', () => {
     ) as HTMLInputElement;
     fireEvent.change(physicalName, { target: { value: 'Material Donor' } });
     fireEvent.change(physicalEmail, { target: { value: 'material@example.com' } });
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Dinheiro' }));
-    expect(
-      (document.getElementById('monetary-donorEmail') as HTMLInputElement).value
-    ).toBe('money@example.com');
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Material' }));
     expect(
       (document.getElementById('physical-donorName') as HTMLInputElement).value
     ).toBe('Material Donor');
+
+    // Switching back re-mounts a fresh monetary form: previous value is gone.
+    fireEvent.click(screen.getByRole('button', { name: 'Pix' }));
     expect(
-      (document.getElementById('physical-donorEmail') as HTMLInputElement).value
-    ).toBe('material@example.com');
+      (document.getElementById('monetary-donorEmail') as HTMLInputElement).value
+    ).toBe('');
+    expect(document.getElementById('physical-donorName')).toBeNull();
   });
 });

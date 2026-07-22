@@ -1,12 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import CatalogPage from './page';
-import { getPublishedProducts, getProductsByCategory } from '@/features/products/queries';
+import {
+  getPublishedRegularProducts,
+  getPublishedScholarshipProducts,
+  getRegularProductsByCategory,
+} from '@/features/products/queries';
 import { getCategories } from '@/features/categories/queries';
 
 vi.mock('@/features/products/queries', () => ({
-  getPublishedProducts: vi.fn(),
-  getProductsByCategory: vi.fn(),
+  getPublishedRegularProducts: vi.fn(),
+  getPublishedScholarshipProducts: vi.fn(),
+  getRegularProductsByCategory: vi.fn(),
 }));
 
 vi.mock('@/features/categories/queries', () => ({
@@ -76,11 +81,12 @@ describe('CatalogPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getCategories).mockResolvedValue(mockCategories);
-    vi.mocked(getPublishedProducts).mockResolvedValue([
+    vi.mocked(getPublishedRegularProducts).mockResolvedValue([
       mockProduct,
       mockPhysicalProduct,
     ]);
-    vi.mocked(getProductsByCategory).mockResolvedValue([mockProduct]);
+    vi.mocked(getPublishedScholarshipProducts).mockResolvedValue([]);
+    vi.mocked(getRegularProductsByCategory).mockResolvedValue([mockProduct]);
   });
 
   describe('Rendering', () => {
@@ -123,8 +129,8 @@ describe('CatalogPage', () => {
         searchParams: Promise.resolve({}),
       });
       render(Page);
-      expect(getPublishedProducts).toHaveBeenCalled();
-      expect(getProductsByCategory).not.toHaveBeenCalled();
+      expect(getPublishedRegularProducts).toHaveBeenCalled();
+      expect(getRegularProductsByCategory).not.toHaveBeenCalled();
       expect(screen.getByText('Test Product')).toBeInTheDocument();
       expect(screen.getByText('Physical Product')).toBeInTheDocument();
     });
@@ -134,13 +140,13 @@ describe('CatalogPage', () => {
         searchParams: Promise.resolve({ category: 'cat-1' }),
       });
       render(Page);
-      expect(getProductsByCategory).toHaveBeenCalledWith('cat-1');
+      expect(getRegularProductsByCategory).toHaveBeenCalledWith('cat-1');
       expect(screen.getByText('Test Product')).toBeInTheDocument();
       expect(screen.queryByText('Physical Product')).not.toBeInTheDocument();
     });
 
     it('should show empty message when no products in selected category', async () => {
-      vi.mocked(getProductsByCategory).mockResolvedValue([]);
+      vi.mocked(getRegularProductsByCategory).mockResolvedValue([]);
       const Page = await CatalogPage({
         searchParams: Promise.resolve({ category: 'cat-1' }),
       });
@@ -149,7 +155,7 @@ describe('CatalogPage', () => {
     });
 
     it('should show empty message when no products available', async () => {
-      vi.mocked(getPublishedProducts).mockResolvedValue([]);
+      vi.mocked(getPublishedRegularProducts).mockResolvedValue([]);
       const Page = await CatalogPage({
         searchParams: Promise.resolve({}),
       });
@@ -189,7 +195,7 @@ describe('CatalogPage', () => {
 
   describe('Empty states', () => {
     it('should handle empty catalog', async () => {
-      vi.mocked(getPublishedProducts).mockResolvedValue([]);
+      vi.mocked(getPublishedRegularProducts).mockResolvedValue([]);
       const Page = await CatalogPage({
         searchParams: Promise.resolve({}),
       });
@@ -202,7 +208,7 @@ describe('CatalogPage', () => {
         ...mockProduct,
         productCategories: [] as typeof mockProduct.productCategories,
       };
-      vi.mocked(getPublishedProducts).mockResolvedValue([productNoCategories]);
+      vi.mocked(getPublishedRegularProducts).mockResolvedValue([productNoCategories]);
       const Page = await CatalogPage({
         searchParams: Promise.resolve({}),
       });

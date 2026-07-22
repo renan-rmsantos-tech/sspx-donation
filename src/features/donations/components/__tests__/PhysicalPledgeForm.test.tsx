@@ -17,11 +17,13 @@ describe('PhysicalPledgeForm', () => {
     render(
       <PhysicalPledgeForm productId="123e4567-e89b-12d3-a456-426614174000" />
     );
-    expect(screen.getByText('Oferecer Este Item')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Preencha seus dados de contato/)
+    ).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Nome completo')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/98765-4321/)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('email@example.com')).toBeInTheDocument();
-    expect(screen.getByText('Enviar Compromisso')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('seu@email.com')).toBeInTheDocument();
+    expect(screen.getByText('Registrar Compromisso')).toBeInTheDocument();
   });
 
   it('should show success toast after successful submission', async () => {
@@ -40,10 +42,10 @@ describe('PhysicalPledgeForm', () => {
     fireEvent.change(screen.getByPlaceholderText(/98765-4321/), {
       target: { value: '11987654321' },
     });
-    fireEvent.change(screen.getByPlaceholderText('email@example.com'), {
+    fireEvent.change(screen.getByPlaceholderText('seu@email.com'), {
       target: { value: 'donor@example.com' },
     });
-    fireEvent.click(screen.getByText('Enviar Compromisso'));
+    fireEvent.click(screen.getByText('Registrar Compromisso'));
 
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith(
@@ -68,10 +70,10 @@ describe('PhysicalPledgeForm', () => {
     fireEvent.change(screen.getByPlaceholderText(/98765-4321/), {
       target: { value: '11987654321' },
     });
-    fireEvent.change(screen.getByPlaceholderText('email@example.com'), {
+    fireEvent.change(screen.getByPlaceholderText('seu@email.com'), {
       target: { value: 'donor@example.com' },
     });
-    fireEvent.click(screen.getByText('Enviar Compromisso'));
+    fireEvent.click(screen.getByText('Registrar Compromisso'));
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith('Este item já foi atendido.');

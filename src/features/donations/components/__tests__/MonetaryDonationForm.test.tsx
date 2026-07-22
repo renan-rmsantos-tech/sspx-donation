@@ -22,9 +22,11 @@ describe('MonetaryDonationForm', () => {
         copiaEColaCode="00020126..."
       />
     );
-    expect(screen.getByText('Faça uma Doação em Dinheiro')).toBeInTheDocument();
-    expect(screen.getByText('Dados de Pagamento PIX')).toBeInTheDocument();
-    expect(screen.getByText('Enviar Doação')).toBeInTheDocument();
+    expect(
+      screen.getByText('Informe o valor que deseja doar')
+    ).toBeInTheDocument();
+    expect(screen.getByText('QR Code')).toBeInTheDocument();
+    expect(screen.getByText('Registrar Doação')).toBeInTheDocument();
   });
 
   it('should show warning when PIX settings not configured', () => {
@@ -52,7 +54,7 @@ describe('MonetaryDonationForm', () => {
         copiaEColaCode="00020126..."
       />
     );
-    expect(screen.getByText(/Restante para atingir a meta/)).toBeInTheDocument();
+    expect(screen.getByText(/Restante:/)).toBeInTheDocument();
   });
 
   it('should render required donor email field', () => {

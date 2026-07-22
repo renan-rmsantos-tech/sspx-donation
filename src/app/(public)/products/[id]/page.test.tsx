@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { notFound } from 'next/navigation';
 import ProductDetailPage from './page';
 import { getPublishedProductById } from '@/features/products/queries';
@@ -132,8 +132,8 @@ describe('ProductDetailPage', () => {
         params: Promise.resolve({ id: '1' }),
       });
       render(Page);
-      expect(screen.getByText('Progresso')).toBeInTheDocument();
-      expect(screen.getByText('50%')).toBeInTheDocument();
+      expect(screen.getByText('Status')).toBeInTheDocument();
+      expect(screen.getByText('50% arrecadado')).toBeInTheDocument();
     });
 
     it('should display target and amount raised', async () => {
@@ -142,8 +142,8 @@ describe('ProductDetailPage', () => {
         params: Promise.resolve({ id: '1' }),
       });
       render(Page);
-      expect(screen.getByText(/Meta:/)).toBeInTheDocument();
-      expect(screen.getByText(/Valor arrecadado:/)).toBeInTheDocument();
+      expect(screen.getByText('meta de arrecadação')).toBeInTheDocument();
+      expect(screen.getByText('50% arrecadado')).toBeInTheDocument();
     });
 
     it('should show fully funded state when current equals target', async () => {
@@ -156,7 +156,7 @@ describe('ProductDetailPage', () => {
         params: Promise.resolve({ id: '1' }),
       });
       render(Page);
-      expect(screen.getByText('100%')).toBeInTheDocument();
+      expect(screen.getByText(/Esta campanha atingiu a meta/)).toBeInTheDocument();
     });
   });
 
@@ -167,8 +167,7 @@ describe('ProductDetailPage', () => {
         params: Promise.resolve({ id: '2' }),
       });
       render(Page);
-      expect(screen.getByText('Atendido')).toBeInTheDocument();
-      expect(screen.getByText('Este item foi atendido')).toBeInTheDocument();
+      expect(screen.getByText(/Este item foi atendido/)).toBeInTheDocument();
     });
 
     it('should display Needed state for unfulfilled physical products', async () => {
@@ -178,8 +177,9 @@ describe('ProductDetailPage', () => {
         params: Promise.resolve({ id: '2' }),
       });
       render(Page);
+      expect(screen.getByText('Ainda necessário')).toBeInTheDocument();
       expect(
-        screen.getByText(/Este item ainda é necessário.*contribuir em dinheiro ou doando o material/)
+        screen.getByText('Adquira e entregue o item diretamente na escola.')
       ).toBeInTheDocument();
     });
   });
@@ -197,8 +197,8 @@ describe('ProductDetailPage', () => {
         params: Promise.resolve({ id: '1' }),
       });
       render(Page);
-      expect(screen.getByText('Faça uma Doação em Dinheiro')).toBeInTheDocument();
-      expect(screen.getByText('Enviar Doação')).toBeInTheDocument();
+      expect(screen.getByText('Como deseja contribuir?')).toBeInTheDocument();
+      expect(screen.getByText('Registrar Doação')).toBeInTheDocument();
     });
 
     it('should render success message for fully funded monetary product', async () => {
@@ -223,8 +223,12 @@ describe('ProductDetailPage', () => {
         params: Promise.resolve({ id: '2' }),
       });
       render(Page);
-      expect(screen.getByText('Oferecer Este Item')).toBeInTheDocument();
-      expect(screen.getByText('Enviar Compromisso')).toBeInTheDocument();
+      // donationMode 'both' renders tabs; switch to the material tab to see the pledge form
+      fireEvent.click(screen.getByText('Doação de Material'));
+      expect(
+        screen.getByText(/Preencha seus dados de contato para registrar seu compromisso/)
+      ).toBeInTheDocument();
+      expect(screen.getByText('Registrar Compromisso')).toBeInTheDocument();
     });
 
     it('should render success message for fulfilled physical product', async () => {
@@ -249,7 +253,8 @@ describe('ProductDetailPage', () => {
         params: Promise.resolve({ id: '1' }),
       });
       render(Page);
-      expect(screen.getByText('Dados de Pagamento PIX')).toBeInTheDocument();
+      expect(screen.getByText('QR Code')).toBeInTheDocument();
+      expect(screen.getByAltText('QR Code PIX')).toBeInTheDocument();
     });
   });
 
@@ -295,7 +300,7 @@ describe('ProductDetailPage', () => {
       expect(img).toHaveClass('object-cover');
     });
 
-    it('should pass correct sizes prop for responsive image loading', async () => {
+    it('should render an unoptimized external product image', async () => {
       const productWithImage = {
         ...mockMonetaryProduct,
         imagePath: 'product-photos/2024-02-18-abc123.jpg',
@@ -306,8 +311,10 @@ describe('ProductDetailPage', () => {
       });
       render(Page);
       const img = screen.getByRole('img', { name: 'Test Monetary Product' });
-      expect(img).toHaveAttribute('sizes', expect.stringContaining('600px'));
-      expect(img).toHaveAttribute('sizes', expect.stringContaining('100vw'));
+      // ProductImage renders external URLs with next/image `unoptimized`, so no
+      // responsive srcset/sizes is generated; the raw external src is used directly.
+      expect(img).toHaveAttribute('src', expect.stringContaining('product-photos'));
+      expect(img).not.toHaveAttribute('srcset');
     });
   });
 
