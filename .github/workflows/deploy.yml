@@ -51,4 +51,8 @@ jobs:
           script: |
             set -euo pipefail
             cd ${{ secrets.DEPLOY_PATH }}
+            # Atualiza o código primeiro para que scripts/deploy.sh exista/esteja
+            # na versão nova (bootstrap: o script não pode se auto-baixar).
+            git fetch --prune origin main
+            git reset --hard origin/main
             DEPLOY_BRANCH=main bash scripts/deploy.sh
