@@ -7,9 +7,16 @@ export interface SessionData {
 }
 
 export const getSession = async () => {
+  const password = process.env.SESSION_PASSWORD;
+  if (!password || password.length < 32) {
+    throw new Error(
+      'SESSION_PASSWORD não configurado ou muito curto (mínimo 32 caracteres).'
+    );
+  }
+
   const cookieStore = await cookies();
   const session = await getIronSession<SessionData>(cookieStore, {
-    password: process.env.SESSION_PASSWORD || '',
+    password,
     cookieName: 'auth-session',
     cookieOptions: {
       secure: process.env.NODE_ENV === 'production',
