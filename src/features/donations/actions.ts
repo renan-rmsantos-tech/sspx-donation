@@ -20,7 +20,7 @@ import { Resend } from 'resend';
 import {
   generateSignedUploadUrl,
   uploadFileDirect,
-} from '@/lib/storage/supabase';
+} from '@/lib/storage/spaces';
 import { generateStoragePath } from '@/lib/utils/format';
 import { validateSession, getSession } from '@/lib/auth/session';
 import { sendDonationConfirmation } from './notifications';

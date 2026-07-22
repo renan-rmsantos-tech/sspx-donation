@@ -6,14 +6,14 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '*.supabase.co',
-        pathname: '/storage/v1/object/public/**',
+        hostname: 'rmsantos-donation-pix-qr.nyc3.digitaloceanspaces.com',
+        pathname: '/**',
       },
       {
-        protocol: 'http',
-        hostname: '127.0.0.1',
-        port: '54321',
-        pathname: '/storage/v1/object/public/**',
+        protocol: 'https',
+        hostname:
+          'rmsantos-donation-product-photos.nyc3.digitaloceanspaces.com',
+        pathname: '/**',
       },
     ],
   },

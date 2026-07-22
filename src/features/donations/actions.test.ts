@@ -34,7 +34,7 @@ vi.mock('@/lib/db', () => ({
   },
 }));
 
-vi.mock('@/lib/storage/supabase', () => ({
+vi.mock('@/lib/storage/spaces', () => ({
   generateSignedUploadUrl: vi.fn(),
 }));
 
@@ -478,7 +478,7 @@ describe('Donation Actions', () => {
 
     it('should generate upload URL for receipts', async () => {
       const { generateSignedUploadUrl: mockGenerateUrl } = await import(
-        '@/lib/storage/supabase'
+        '@/lib/storage/spaces'
       );
 
       vi.mocked(mockGenerateUrl).mockResolvedValueOnce({
@@ -498,7 +498,7 @@ describe('Donation Actions', () => {
 
     it('should generate upload URL for PIX QR', async () => {
       const { generateSignedUploadUrl: mockGenerateUrl } = await import(
-        '@/lib/storage/supabase'
+        '@/lib/storage/spaces'
       );
 
       vi.mocked(mockGenerateUrl).mockResolvedValueOnce({

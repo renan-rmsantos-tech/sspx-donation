@@ -1,0 +1,25 @@
+# syntax=docker/dockerfile:1.7
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package.json ./
+RUN npm install
+
+COPY . .
+
+ARG NEXT_PUBLIC_SPACES_PIX_QR_URL
+ARG NEXT_PUBLIC_SPACES_PRODUCT_PHOTOS_URL
+ARG NEXT_PUBLIC_SITE_URL
+
+ENV NEXT_PUBLIC_SPACES_PIX_QR_URL=$NEXT_PUBLIC_SPACES_PIX_QR_URL
+ENV NEXT_PUBLIC_SPACES_PRODUCT_PHOTOS_URL=$NEXT_PUBLIC_SPACES_PRODUCT_PHOTOS_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV NODE_ENV=production
+
+RUN --mount=type=secret,id=app_env,target=/app/.env,required=true \
+    npm run build
+
+EXPOSE 3000
+
+CMD ["npm", "start"]

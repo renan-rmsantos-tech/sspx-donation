@@ -1,0 +1,42 @@
+name: sspx-donation
+
+services:
+  donation:
+    build:
+      context: .
+      secrets:
+        - app_env
+      args:
+        NEXT_PUBLIC_SPACES_PIX_QR_URL: ${NEXT_PUBLIC_SPACES_PIX_QR_URL}
+        NEXT_PUBLIC_SPACES_PRODUCT_PHOTOS_URL: ${NEXT_PUBLIC_SPACES_PRODUCT_PHOTOS_URL}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    networks:
+      - internal
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.doacoes.rule=Host(`ajude-o-colegio-sao-jose.com`)
+      - traefik.http.routers.doacoes.entrypoints=websecure
+      - traefik.http.routers.doacoes.tls=true
+      - traefik.http.routers.doacoes.tls.certresolver=letsencrypt
+      - traefik.http.services.doacoes.loadbalancer.server.port=3000
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  internal:
+    external: true
+  proxy:
+    external: true
+
+secrets:
+  app_env:
+    file: ./.env

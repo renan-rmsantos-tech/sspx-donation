@@ -1,14 +1,17 @@
-/**
- * Public storage URLs — safe for client components (only NEXT_PUBLIC_SUPABASE_URL).
- */
 export function getPublicUrl(bucket: string, path: string): string {
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const bases: Record<string, string | undefined> = {
+    'pix-qr': process.env.NEXT_PUBLIC_SPACES_PIX_QR_URL,
+    'product-photos': process.env.NEXT_PUBLIC_SPACES_PRODUCT_PHOTOS_URL,
+  };
+
+  const base = bases[bucket];
+
   if (!base) {
-    throw new Error('NEXT_PUBLIC_SUPABASE_URL environment variable is not set');
+    throw new Error(`Public URL is not configured for bucket: ${bucket}`);
   }
+
   const trimmedBase = base.replace(/\/$/, '');
   const cleanPath = path.replace(/^\//, '');
-  return encodeURI(
-    `${trimmedBase}/storage/v1/object/public/${bucket}/${cleanPath}`
-  );
+
+  return encodeURI(`${trimmedBase}/${cleanPath}`);
 }

@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 import { ZodError } from 'zod';
 import { createProductSchema, updateProductSchema, generateProductPhotoUploadUrlSchema } from './schemas';
 import { validateSession } from '@/lib/auth/session';
-import { generateSignedUploadUrl, deleteStorageObject } from '@/lib/storage/supabase';
+import { generateSignedUploadUrl, deleteStorageObject } from '@/lib/storage/spaces';
 import { generateStoragePath } from '@/lib/utils/format';
 
 interface ActionResult<T> {

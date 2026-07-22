@@ -6,7 +6,7 @@ import {
   generateProductPhotoUploadUrl,
 } from './actions';
 import { validateSession } from '@/lib/auth/session';
-import { generateSignedUploadUrl, deleteStorageObject } from '@/lib/storage/supabase';
+import { generateSignedUploadUrl, deleteStorageObject } from '@/lib/storage/spaces';
 import { generateStoragePath } from '@/lib/utils/format';
 
 vi.mock('@/lib/db', () => ({
@@ -28,7 +28,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }));
 
-vi.mock('@/lib/storage/supabase', () => ({
+vi.mock('@/lib/storage/spaces', () => ({
   generateSignedUploadUrl: vi.fn(),
   deleteStorageObject: vi.fn(),
 }));

@@ -145,6 +145,7 @@ export function ProductForm({ categories, product, imageUrl }: ProductFormProps)
             body: selectedFile,
             headers: {
               'Content-Type': selectedFile.type,
+	      'x-amz-acl': 'public-read',
             },
           });
 

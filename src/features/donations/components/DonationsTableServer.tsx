@@ -1,5 +1,5 @@
 import { getDonationsFiltered, type DonationRow } from '../queries';
-import { generateSignedDownloadUrl } from '@/lib/storage/supabase';
+import { generateSignedDownloadUrl } from '@/lib/storage/spaces';
 import { DonationsTableClient } from './DonationsTableClient';
 import type { DonationFilters } from '../lib/parse-filters';
 
