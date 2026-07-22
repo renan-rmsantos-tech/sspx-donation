@@ -28,10 +28,8 @@ jobs:
       # Gate: lint precisa passar para o deploy prosseguir.
       - run: npm run lint
 
-      # Informativo: o suite tem falhas de mock por drift de versões (a resolver).
-      # Não bloqueia o deploy — remova `continue-on-error` quando estiver verde.
-      - name: Testes (informativo)
-        continue-on-error: true
+      # Gate: os testes precisam passar para o deploy prosseguir.
+      - name: Testes
         run: npm test
 
   deploy:

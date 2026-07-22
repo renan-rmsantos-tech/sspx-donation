@@ -51,7 +51,10 @@ export function DonationTabs({
         </button>
       </div>
 
-      {activeTab === 'monetary' && (
+      {/* Ambos os formulários ficam montados; apenas ocultamos o inativo via
+          CSS para que o que o usuário digitou seja preservado ao trocar de aba
+          (cada form mantém seu próprio estado local). */}
+      <div className={activeTab === 'monetary' ? undefined : 'hidden'}>
         <MonetaryDonationForm
           productId={productId}
           targetAmount={targetAmount ?? 0}
@@ -60,11 +63,11 @@ export function DonationTabs({
           copiaEColaCode={copiaEColaCode}
           idPrefix="monetary-"
         />
-      )}
+      </div>
 
-      {activeTab === 'physical' && (
+      <div className={activeTab === 'physical' ? undefined : 'hidden'}>
         <PhysicalPledgeForm productId={productId} idPrefix="physical-" />
-      )}
+      </div>
     </div>
   );
 }

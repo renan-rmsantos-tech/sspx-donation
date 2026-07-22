@@ -13,7 +13,12 @@ describe('DonationTabs', () => {
     vi.clearAllMocks();
   });
 
-  it('renders both tab triggers and defaults to Dinheiro content', () => {
+  // Um form está oculto (wrapper com classe `hidden`) quando não é a aba ativa,
+  // mas permanece montado no DOM para preservar seu estado.
+  const isHidden = (id: string) =>
+    !!document.getElementById(id)?.closest('div.hidden');
+
+  const renderTabs = () =>
     render(
       <DonationTabs
         productId="123e4567-e89b-12d3-a456-426614174000"
@@ -23,84 +28,58 @@ describe('DonationTabs', () => {
         copiaEColaCode="00020126..."
       />
     );
+
+  it('renders both tab triggers and defaults to the Pix (monetary) tab', () => {
+    renderTabs();
 
     expect(screen.getByRole('button', { name: 'Pix' })).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Doação de Material' })
     ).toBeInTheDocument();
-    expect(
-      screen.getByText('Informe o valor que deseja doar')
-    ).toBeInTheDocument();
+
+    // Both forms are mounted; only the monetary one is visible by default.
+    expect(isHidden('monetary-donorEmail')).toBe(false);
+    expect(isHidden('physical-donorName')).toBe(true);
   });
 
-  it('switches between Dinheiro and Material tabs', () => {
-    render(
-      <DonationTabs
-        productId="123e4567-e89b-12d3-a456-426614174000"
-        targetAmount={10000}
-        currentAmount={0}
-        qrCodeImageUrl="https://example.com/qr.png"
-        copiaEColaCode="00020126..."
-      />
-    );
+  it('toggles which form is visible when switching tabs', () => {
+    renderTabs();
 
     fireEvent.click(screen.getByRole('button', { name: 'Doação de Material' }));
-    expect(
-      screen.getByText(/Preencha seus dados de contato/)
-    ).toBeInTheDocument();
+    expect(isHidden('monetary-donorEmail')).toBe(true);
+    expect(isHidden('physical-donorName')).toBe(false);
 
     fireEvent.click(screen.getByRole('button', { name: 'Pix' }));
-    expect(
-      screen.getByText('Informe o valor que deseja doar')
-    ).toBeInTheDocument();
+    expect(isHidden('monetary-donorEmail')).toBe(false);
+    expect(isHidden('physical-donorName')).toBe(true);
   });
 
-  // NOTE: The current DonationTabs mounts only the active tab's form via a
-  // conditional (`activeTab === ... && <Form />`), so each form holds its own
-  // local `useState`. Switching tabs unmounts the inactive form and discards
-  // its state, so field values are NOT preserved across tab switches. This test
-  // documents that current behavior (see agent report re: possible regression).
-  it('renders an independent, freshly-mounted form per tab', () => {
-    render(
-      <DonationTabs
-        productId="123e4567-e89b-12d3-a456-426614174000"
-        targetAmount={10000}
-        currentAmount={0}
-        qrCodeImageUrl="https://example.com/qr.png"
-        copiaEColaCode="00020126..."
-      />
-    );
+  // Both forms stay mounted (hidden via CSS), so field values are preserved
+  // across tab switches instead of being discarded.
+  it('preserves each form\'s input across tab switches', () => {
+    renderTabs();
 
     const monetaryEmail = document.getElementById(
       'monetary-donorEmail'
     ) as HTMLInputElement;
     fireEvent.change(monetaryEmail, { target: { value: 'money@example.com' } });
-    expect(
-      (document.getElementById('monetary-donorEmail') as HTMLInputElement).value
-    ).toBe('money@example.com');
 
     fireEvent.click(screen.getByRole('button', { name: 'Doação de Material' }));
-
-    // Monetary form is unmounted while the Material tab is active.
-    expect(document.getElementById('monetary-donorEmail')).toBeNull();
 
     const physicalName = document.getElementById(
       'physical-donorName'
     ) as HTMLInputElement;
-    const physicalEmail = document.getElementById(
-      'physical-donorEmail'
-    ) as HTMLInputElement;
     fireEvent.change(physicalName, { target: { value: 'Material Donor' } });
-    fireEvent.change(physicalEmail, { target: { value: 'material@example.com' } });
-    expect(
-      (document.getElementById('physical-donorName') as HTMLInputElement).value
-    ).toBe('Material Donor');
 
-    // Switching back re-mounts a fresh monetary form: previous value is gone.
+    // Switch back to Pix: monetary value must still be there...
     fireEvent.click(screen.getByRole('button', { name: 'Pix' }));
     expect(
       (document.getElementById('monetary-donorEmail') as HTMLInputElement).value
-    ).toBe('');
-    expect(document.getElementById('physical-donorName')).toBeNull();
+    ).toBe('money@example.com');
+
+    // ...and the physical form's value is preserved too (still mounted).
+    expect(
+      (document.getElementById('physical-donorName') as HTMLInputElement).value
+    ).toBe('Material Donor');
   });
 });
