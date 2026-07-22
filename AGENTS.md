@@ -4,19 +4,21 @@ This document describes the foundation and infrastructure established during pro
 
 ## Project Overview
 
-**Church Donations Platform** - A transparent, community-driven donation platform built with Next.js 15, Drizzle ORM, and Supabase.
+**Church Donations Platform** - A transparent, community-driven donation platform built with Next.js 15, Drizzle ORM, and PostgreSQL, hosted on DigitalOcean.
 
 ## Architecture
 
 ### Core Stack
 
 - **Frontend**: Next.js 15 (App Router)
-- **Database**: PostgreSQL (via Supabase)
+- **Database**: PostgreSQL (container on the DigitalOcean Droplet in production; Supabase CLI provides a local Postgres for development)
 - **ORM**: Drizzle
 - **Authentication**: iron-session (fixed credential admin)
-- **File Storage**: Supabase Storage
+- **File Storage**: DigitalOcean Spaces (S3-compatible, via `@aws-sdk/client-s3`)
+- **Emails**: Resend (thank-you emails and broadcasts)
 - **Styling**: Tailwind CSS + shadcn/ui
 - **Testing**: Vitest
+- **Production infra**: DigitalOcean Droplet + Docker Compose + Traefik (see `docs/deploy.md`)
 
 ### Directory Structure
 
@@ -28,10 +30,11 @@ src/
 │   ├── layout.tsx         # Root layout
 │   └── globals.css        # Global styles
 ├── features/              # Feature modules
-│   ├── donations/         # Donation flows
+│   ├── donations/         # Donation flows + emails
 │   ├── products/          # Product management
 │   ├── categories/        # Category management
 │   ├── pix/              # PIX settings
+│   ├── broadcasts/        # Email broadcasts
 │   └── dashboard/         # Admin dashboard
 ├── lib/
 │   ├── db/               # Database client & schema
@@ -50,9 +53,8 @@ Skills são pacotes de instruções para assistentes (Cursor, Claude Code, etc.)
 
 | Local | Uso |
 | --- | --- |
-| `.agents/skills/` | Conjunto principal referenciado pelo Cursor neste workspace. |
-| `.agent/skills/` | Espelho do mesmo conjunto (mesmos 23 skills). |
-| `.claude/skills/`, `.trae/skills/`, `.kilocode/skills/` | Cópias alinhadas a outros clientes/ferramentas; o conteúdo espelha o mesmo catálogo. |
+| `.agents/skills/` | Conjunto principal (fonte). **Não versionado** (`.gitignore`) — precisa existir localmente. |
+| `.agent/skills/`, `.claude/skills/`, `.trae/skills/`, `.kilocode/skills/` | Symlinks versionados apontando para `../../.agents/skills/*`. Se `.agents/` não existir na máquina, os links ficam quebrados (restaure a pasta para reativá-los). |
 
 ### Catálogo (`.agents/skills/<id>/SKILL.md`)
 
@@ -86,6 +88,8 @@ Para o texto completo de cada skill (passos, regras, referências), abra o `SKIL
 
 ## Database Schema
 
+Source of truth: `src/lib/db/schema.ts` (migrations in `src/lib/db/migrations/`).
+
 ### Tables
 
 1. **categories** - Donation categories
@@ -100,6 +104,9 @@ Para o texto completo de cada skill (passos, regras, referências), abra o `SKIL
    - currentAmount (denormalized, in cents)
    - isFulfilled
    - isPublished
+   - imagePath (Spaces path for product photo)
+   - donationMode (`monetary` | `physical` | `both`)
+   - productType (`regular` | `scholarship`)
    - timestamps
 
 3. **product_categories** - Product-category relationships
@@ -110,17 +117,33 @@ Para o texto completo de cada skill (passos, regras, referências), abra o `SKIL
 4. **donations** - Recorded donations/pledges
    - id (UUID PK)
    - productId (FK)
-   - donationType
+   - donationType (`monetary` | `physical`)
    - amount (monetary, in cents)
    - donorName, donorPhone, donorEmail
-   - receiptPath (storage path)
+   - receiptPath (Spaces path)
+   - isVerified (financial team verification flag)
+   - emailSentAt (last thank-you email timestamp)
    - createdAt
 
 5. **pix_settings** - PIX configuration
    - id (UUID PK)
-   - qrCodeImagePath
+   - qrCodeImagePath (Spaces path)
    - copiaEColaCode
    - updatedAt
+
+6. **broadcasts** - Email broadcast history
+   - id (UUID PK)
+   - subject, message
+   - recipientCount, sentSuccessCount, sentFailureCount
+   - sentBy, senderName
+   - createdAt (indexed)
+
+7. **fund_transfers** - Transfers of funds between products
+   - id (UUID PK)
+   - sourceProductId, targetProductId (FKs, `ON DELETE RESTRICT`)
+   - amount (in cents)
+   - adminUsername
+   - createdAt (indexed)
 
 ## Key Features Established
 
@@ -133,18 +156,19 @@ Para o texto completo de cada skill (passos, regras, referências), abra o `SKIL
 
 ### Database Access
 
-- Drizzle ORM with PostgreSQL driver
-- Connection pooling via Supabase
-- Query timeout: 10 seconds
-- Migrations: Drizzle Kit generates SQL migrations
+- Drizzle ORM with the `postgres` (postgres-js) driver
+- Connect timeout: 10 seconds; lazy client (never connects during `next build`)
+- Migrations: Drizzle Kit generates SQL migrations (`npm run db:generate` / `db:migrate`)
 
 ### File Storage
 
-- **Supabase Storage** for receipts and QR codes
-- **Signed URLs**: 60-second expiry for secure uploads
-- **Buckets**:
+- **DigitalOcean Spaces** (S3-compatible) via `src/lib/storage/spaces.ts`
+- **Signed URLs**: 5-minute expiry for uploads and private downloads
+- **Buckets** (names configured via `DO_SPACES_BUCKET_*` env vars):
   - `receipts` (private) - PIX payment proofs
   - `pix-qr` (public) - QR code image
+  - `product-photos` (public) - product images
+- Public URLs come from `NEXT_PUBLIC_SPACES_PIX_QR_URL` / `NEXT_PUBLIC_SPACES_PRODUCT_PHOTOS_URL` (also allow-listed in `next.config.ts` `remotePatterns`)
 
 ### Validation
 
@@ -169,7 +193,7 @@ cp .env.example .env.local
 ### Local Development
 
 ```bash
-# Start Supabase stack (Docker required)
+# Start the local Postgres (Supabase CLI, Docker required — used only as a dev database)
 npm run supabase:start
 
 # Generate and apply migrations
@@ -178,6 +202,8 @@ npm run db:migrate
 
 # Start Next.js dev server
 npm run dev
+# If your shell exports a production DATABASE_URL, use instead:
+npm run dev:local
 ```
 
 ### Testing
@@ -198,12 +224,15 @@ npm run test:coverage
 ```bash
 # After schema changes
 npm run db:generate
-# Review generated migration in src/lib/db/migrations/
+# Review generated migration in src/lib/db/migrations/ (source of truth)
+# Mirror the SQL into supabase/migrations/<timestamp>_<name>.sql (local reset uses it)
 npm run db:migrate
 
-# Reset database (local only)
-npx supabase db reset
+# Reset database (local only; applies supabase/migrations/ + supabase/seed.sql)
+npm run supabase:reset
 ```
+
+Production: migrations are **not** applied automatically by the deploy — apply them on the Droplet (see `docs/deploy.md`, "Migrações em produção").
 
 ## Server Actions
 
@@ -230,6 +259,12 @@ All mutations are implemented as Server Actions in Next.js (no API routes).
 ### PIX Actions
 
 - `updatePixSettings` - Update QR code and copia e cola (admin only)
+
+### Other admin features
+
+- **Broadcasts** (`features/broadcasts`) - send email announcements to past donors (Resend), with history
+- **Fund transfers** (`admin/transfers`) - move funds between products, audited in `fund_transfers`
+- **Financeiro** (`admin/financeiro`) - donation listing with verification flag (`isVerified`)
 
 ## Query Functions
 
@@ -277,7 +312,7 @@ Common errors:
 
 1. **Denormalized Progress**: `current_amount` on products table for fast catalog reads
 2. **Atomic Transactions**: All donation writes wrapped in DB transactions
-3. **Signed URLs**: Direct client-to-Supabase uploads bypass server
+3. **Signed URLs**: Direct client-to-Spaces uploads bypass the server (requires CORS on the Spaces buckets)
 4. **Drizzle Lightweight**: Better cold-start performance than Prisma
 
 ## Security
@@ -289,32 +324,29 @@ Common errors:
 
 ## Deployment
 
-### Vercel
+Production runs entirely on DigitalOcean — full details in `docs/deploy.md`:
 
-- Deploy Next.js app directly
-- Environment variables set in Vercel dashboard
-- Database: Connection pooling via Supabase (port 6543)
-- Storage: Direct signed URLs from serverless functions
-
-### Supabase
-
-- Managed PostgreSQL
-- Storage RLS policies enforced
-- Free tier sufficient for MVP (~500MB DB, 1GB storage)
+- **Droplet** with Docker Compose (`compose.traefik.yaml`) behind **Traefik** (TLS via Let's Encrypt), domain `ajude-o-colegio-sao-jose.com`
+- **PostgreSQL** as a container on the Droplet's `internal` Docker network (`postgres:5432/donation`)
+- **DigitalOcean Spaces** for file storage (three buckets)
+- **CI/CD**: GitHub Actions (`.github/workflows/deploy.yml`) — lint and tests are deploy gates; deploy happens over SSH running `scripts/deploy.sh`
+- Production `.env` lives on the Droplet (mounted as a build secret and injected at runtime; never committed)
 
 ## Troubleshooting
 
 ### Database Connection Issues
 
 1. Check `DATABASE_URL` in `.env.local`
-2. Verify Supabase CLI is running: `npx supabase start`
+2. Verify the local Postgres is running: `npm run supabase:start`
 3. Check Docker is running
+4. Shell-exported production `DATABASE_URL`? Use `npm run dev:local`
 
 ### Migration Failures
 
 1. Review generated SQL in `src/lib/db/migrations/`
-2. Reset local database: `npx supabase db reset`
+2. Reset local database: `npm run supabase:reset`
 3. Check schema.ts for conflicts
+4. If the runtime `DATABASE_URL` can't run DDL, set `DATABASE_URL_MIGRATE`
 
 ### Authentication Issues
 
@@ -322,14 +354,8 @@ Common errors:
 2. Check iron-session cookies in DevTools
 3. Ensure `/admin/login` credentials match env vars
 
-## Next Steps
+## Feature Status
 
-Following tasks build on this foundation:
+The foundation features are implemented and in production: admin authentication, admin CRUD (products/categories), public catalog, monetary and physical donation flows, admin dashboard, thank-you emails, email broadcasts, scholarship products, fund transfers, and the financial verification view.
 
-1. **Admin Authentication** - Implement login flow
-2. **Admin CRUD** - Product and category management pages
-3. **Public Catalog** - Product listing and filtering
-4. **Donation Flows** - Monetary and physical donation UIs
-5. **Admin Dashboard** - Summary statistics and reports
-
-All features inherit the scaffold's infrastructure, validation patterns, and test setup.
+New features should follow the established patterns: Server Actions with Zod validation, Drizzle transactions, Spaces for files, and Vitest coverage (tests are a deploy gate).

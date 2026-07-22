@@ -7,14 +7,14 @@ loadEnvConfig(process.cwd());
 //
 // 1. Altere src/lib/db/schema.ts
 // 2. Gere o SQL:  npm run db:generate
-//    → cria arquivo em src/lib/db/migrations/
-// 3. Copie o SQL gerado para supabase/migrations/<timestamp>_<nome>.sql
-//    (use o timestamp do momento, ex: 20260325000000)
-// 4. Aplique em produção via Supabase MCP (apply_migration) ou CLI (supabase db push)
-// 5. Para dev local: npm run supabase:reset  (recria a partir de supabase/migrations/)
+//    → cria arquivo em src/lib/db/migrations/ (fonte da verdade)
+// 3. Espelhe o SQL em supabase/migrations/<timestamp>_<nome>.sql
+//    (usado só pelo Postgres local do Supabase CLI em `npm run supabase:reset`)
+// 4. Local: npm run db:migrate  (ou supabase:reset para recriar do zero + seed)
+// 5. Produção: aplique na Droplet — ver docs/deploy.md ("Migrações em produção")
 //
-// DATABASE_URL_MIGRATE (session pooler / direct) é necessário para o Supabase hospedado.
-// O transaction pooler (porta 6543) pode causar "Tenant or user not found".
+// DATABASE_URL_MIGRATE é um override opcional usado apenas por generate/migrate
+// quando o DATABASE_URL do runtime não serve para DDL.
 const url = process.env.DATABASE_URL_MIGRATE || process.env.DATABASE_URL;
 
 if (!url) {

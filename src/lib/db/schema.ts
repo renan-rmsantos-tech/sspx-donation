@@ -30,7 +30,7 @@ export const products = pgTable('products', {
   currentAmount: integer('current_amount').default(0).notNull(), // denormalized, BRL cents
   isFulfilled: boolean('is_fulfilled').default(false).notNull(),
   isPublished: boolean('is_published').default(true).notNull(),
-  imagePath: text('image_path'), // Supabase Storage path for product photo
+  imagePath: text('image_path'), // Spaces path for product photo
   donationMode: donationModeEnum('donation_mode').notNull().default('both'), // 'monetary', 'physical', or 'both'
   productType: productTypeEnum('product_type').notNull().default('regular'), // 'regular' (general items) or 'scholarship'
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -62,7 +62,7 @@ export const donations = pgTable('donations', {
   donorName: text('donor_name'), // optional for monetary, required for physical
   donorPhone: text('donor_phone'), // required for physical
   donorEmail: text('donor_email'), // optional
-  receiptPath: text('receipt_path'), // Supabase Storage path, monetary only
+  receiptPath: text('receipt_path'), // Spaces path, monetary only
   isVerified: boolean('is_verified').default(false).notNull(), // financial team verification flag
   emailSentAt: timestamp('email_sent_at'), // timestamp of last thank-you email sent
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -70,7 +70,7 @@ export const donations = pgTable('donations', {
 
 export const pixSettings = pgTable('pix_settings', {
   id: uuid('id').primaryKey().defaultRandom(),
-  qrCodeImagePath: text('qr_code_image_path'), // Supabase Storage path
+  qrCodeImagePath: text('qr_code_image_path'), // Spaces path
   copiaEColaCode: text('copia_e_cola_code'),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
