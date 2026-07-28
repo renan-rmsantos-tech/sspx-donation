@@ -1,5 +1,10 @@
 name: Deploy (DigitalOcean)
 
+# DORMENTE — o GitHub Actions está desabilitado no nível da conta
+# (422 "Actions has been disabled for this user"), então este workflow não
+# dispara. O deploy real é `git push production main` (README.md → Deploy).
+# Mantido no repo para religar quando o suporte do GitHub liberar a conta.
+#
 # Deploy automático: a cada push na main, roda testes/lint e, se passarem,
 # conecta via SSH na Droplet para reconstruir e subir o container.
 on:
