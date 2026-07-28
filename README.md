@@ -111,7 +111,35 @@ npm run supabase:stop  # Parar o PostgreSQL local
 
 ## Deploy
 
-O deploy é automático: **push na `main`** → GitHub Actions roda lint + testes (gates) → conecta via SSH na Droplet → `scripts/deploy.sh` reconstrói e sobe o container com Docker Compose + Traefik.
+> **O GitHub Actions está bloqueado no nível da conta** (`renan-rmsantos-tech`):
+> qualquer disparo devolve `422 "Actions has been disabled for this user."`. O
+> workflow continua no repo para quando o suporte do GitHub liberar, mas **não
+> dispara**. O deploy corrente é o push-to-deploy abaixo.
+
+**Publicar:**
+
+```bash
+git push origin main       # hospeda o código no GitHub
+git push production main   # publica na Droplet
+```
+
+O segundo push é recebido pelo próprio clone da Droplet
+(`receive.denyCurrentBranch=updateInstead`) e processado por
+[`scripts/post-receive.sh`](scripts/post-receive.sh): reconstrói a imagem, espera
+o site responder 200 e **reverte sozinho** se algo falhar. O log do build sai no
+seu terminal durante o push; o histórico fica em `~/deploy-sspx-donation.log` na
+Droplet.
+
+O portão de testes vive no `Dockerfile` (`RUN npm test`, 383 testes): suíte
+vermelha = imagem não é gerada = container antigo continua servindo.
+
+**Configuração inicial** (uma vez) e detalhes do padrão:
+[`sspx-catechism/infra/README.md` §8](https://github.com/renan-rmsantos-tech/sspx-catechism/blob/main/infra/README.md).
+
+> ⚠️ `scripts/deploy.sh` continua servindo como deploy manual na Droplet, mas ele
+> faz `git reset --hard origin/main` — ou seja, alinha pelo **GitHub**. Se você
+> publicar com `git push production main` sem também empurrar para o `origin`, um
+> `deploy.sh` posterior desfaz o que está no ar. Empurre sempre para os dois.
 
 Arquitetura, secrets, pré-requisitos da Droplet, migrações em produção e rollback: [`docs/deploy.md`](docs/deploy.md).
 
