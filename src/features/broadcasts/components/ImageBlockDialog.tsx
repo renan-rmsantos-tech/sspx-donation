@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { generateBroadcastImageUploadUrl } from '../actions';
+import { uploadBroadcastImage } from '../actions';
 import type { BroadcastImage } from '../content';
 import {
   BroadcastImageError,
@@ -90,26 +90,23 @@ export function ImageBlockDialog({
     setIsUploading(true);
     try {
       const optimized = await compressBroadcastImage(file);
-      const upload = await generateBroadcastImageUploadUrl({ composerId });
+      const formData = new FormData();
+      formData.set('composerId', composerId);
+      formData.set(
+        'file',
+        new File([optimized], 'broadcast-image.jpg', {
+          type: 'image/jpeg',
+        })
+      );
+      const upload = await uploadBroadcastImage(formData);
       if (!upload.success || !upload.data) {
         throw new BroadcastImageError(
           upload.error === 'UNAUTHORIZED'
             ? 'Sua sessão expirou. Entre novamente antes de enviar a imagem.'
-            : 'Não foi possível preparar o upload. Tente novamente.'
-        );
-      }
-
-      const response = await fetch(upload.data.signedUrl, {
-        method: 'PUT',
-        body: optimized,
-        headers: {
-          'Content-Type': 'image/jpeg',
-          'x-amz-acl': 'public-read',
-        },
-      });
-      if (!response.ok) {
-        throw new BroadcastImageError(
-          'O Spaces recusou o upload. Verifique a configuração e tente novamente.'
+            : errorDetail(
+                upload.details,
+                'Não foi possível enviar a imagem. Tente novamente.'
+              )
         );
       }
 
@@ -252,3 +249,14 @@ export function ImageBlockDialog({
   );
 }
 
+function errorDetail(details: unknown, fallback: string): string {
+  if (
+    details &&
+    typeof details === 'object' &&
+    'message' in details &&
+    typeof details.message === 'string'
+  ) {
+    return details.message;
+  }
+  return fallback;
+}

@@ -79,8 +79,8 @@ ssh-copy-id -i deploy_key.pub USER@DROPLET_HOST   # ou anexe em ~/.ssh/authorize
 ## DigitalOcean Spaces
 
 - Buckets usados: `receipts` (**privado** — comprovantes), `pix-qr`, `product-photos` e `broadcast-images` (**públicos** — ACL `public-read` aplicada no upload).
-- Downloads de comprovantes usam URLs assinadas (5 min); uploads podem usar URL assinada gerada no servidor e enviada ao browser — o Spaces precisa de **CORS liberado** (método `PUT`) para a origem `https://ajude-o-colegio-sao-jose.com` (e `http://localhost:3000` em dev).
-- Configure no bucket `broadcast-images` uma regra de ciclo de vida para remover objetos em `temporary/` após 7 dias. Imagens efetivamente enviadas são promovidas para `broadcasts/<id>/`.
+- Downloads de comprovantes usam URLs assinadas (5 min); os uploads de QR Code, fotos de produtos e comprovantes vão direto do browser e exigem **CORS liberado** (método `PUT`) para a origem do site.
+- Imagens de comunicados passam pelo Server Action autenticado (até 2 MB após otimização), sem depender de CORS. A aplicação remove objetos em `temporary/` com mais de 7 dias oportunisticamente em novos uploads; uma regra de ciclo de vida equivalente no bucket é uma proteção adicional opcional.
 - As URLs públicas ficam em `NEXT_PUBLIC_SPACES_*_URL`. Os buckets consumidos pelo componente `next/image` também precisam estar nos `remotePatterns` de `next.config.ts`.
 
 ## Migrações em produção

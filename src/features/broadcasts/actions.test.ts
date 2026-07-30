@@ -1,16 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   deleteTemporaryBroadcastImage,
-  generateBroadcastImageUploadUrl,
   sendBroadcastEmail,
   sendTestBroadcastEmail,
+  uploadBroadcastImage,
 } from './actions';
 import { db } from '@/lib/db';
 import { getSession } from '@/lib/auth/session';
 import {
   copyStorageObject,
+  deleteStorageObjectsOlderThan,
   deleteStorageObject,
-  generateSignedUploadUrl,
+  uploadFileDirect,
 } from '@/lib/storage/spaces';
 import { getBroadcastRecipientEmails } from './queries';
 import type { BroadcastContentV1 } from './content';
@@ -36,7 +37,8 @@ vi.mock('@/lib/auth/session', () => ({
 }));
 
 vi.mock('@/lib/storage/spaces', () => ({
-  generateSignedUploadUrl: vi.fn(),
+  uploadFileDirect: vi.fn(),
+  deleteStorageObjectsOlderThan: vi.fn(),
   copyStorageObject: vi.fn(),
   deleteStorageObject: vi.fn(),
 }));
@@ -102,10 +104,8 @@ describe('broadcast actions', () => {
       data: { id: 'email-id' },
       error: null,
     });
-    vi.mocked(generateSignedUploadUrl).mockResolvedValue({
-      signedUrl: 'https://signed-upload.example.com',
-      path: temporaryPath,
-    });
+    vi.mocked(uploadFileDirect).mockResolvedValue({ path: temporaryPath });
+    vi.mocked(deleteStorageObjectsOlderThan).mockResolvedValue(0);
     vi.mocked(copyStorageObject).mockResolvedValue({
       path: temporaryPath,
     });
@@ -120,33 +120,71 @@ describe('broadcast actions', () => {
     );
   });
 
-  it('requires an admin session before generating an upload URL', async () => {
+  function imageUploadForm(): FormData {
+    const formData = new FormData();
+    formData.set(
+      'composerId',
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    );
+    formData.set(
+      'file',
+      new File(
+        [new Uint8Array([0xff, 0xd8, 0xff, 0xd9])],
+        'broadcast.jpg',
+        { type: 'image/jpeg' }
+      )
+    );
+    return formData;
+  }
+
+  it('requires an admin session before uploading a broadcast image', async () => {
     vi.mocked(getSession).mockResolvedValueOnce({
       isAdmin: false,
     } as never);
 
-    const result = await generateBroadcastImageUploadUrl({
-      composerId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    });
+    const result = await uploadBroadcastImage(imageUploadForm());
 
     expect(result).toEqual({ success: false, error: 'UNAUTHORIZED' });
-    expect(generateSignedUploadUrl).not.toHaveBeenCalled();
+    expect(uploadFileDirect).not.toHaveBeenCalled();
   });
 
-  it('generates a public JPEG upload under the temporary composer prefix', async () => {
-    const result = await generateBroadcastImageUploadUrl({
-      composerId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    });
+  it('uploads a validated JPEG under the temporary composer prefix', async () => {
+    const result = await uploadBroadcastImage(imageUploadForm());
 
     expect(result.success).toBe(true);
     expect(result.data?.path).toMatch(
       /^temporary\/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\/.+\.jpg$/
     );
-    expect(generateSignedUploadUrl).toHaveBeenCalledWith(
+    expect(deleteStorageObjectsOlderThan).toHaveBeenCalledWith(
+      'broadcast-images',
+      'temporary/',
+      expect.any(Date)
+    );
+    expect(uploadFileDirect).toHaveBeenCalledWith(
       'broadcast-images',
       expect.stringMatching(/^temporary\//),
-      { contentType: 'image/jpeg', publicRead: true }
+      expect.any(ArrayBuffer),
+      { contentType: 'image/jpeg' }
     );
+  });
+
+  it('rejects a file that only claims to be a JPEG', async () => {
+    const formData = new FormData();
+    formData.set(
+      'composerId',
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    );
+    formData.set(
+      'file',
+      new File(['not-an-image'], 'broadcast.jpg', {
+        type: 'image/jpeg',
+      })
+    );
+
+    const result = await uploadBroadcastImage(formData);
+
+    expect(result.error).toBe('VALIDATION_ERROR');
+    expect(uploadFileDirect).not.toHaveBeenCalled();
   });
 
   it('only deletes validated temporary broadcast images', async () => {
@@ -236,4 +274,3 @@ describe('broadcast actions', () => {
     );
   });
 });
-

@@ -40,7 +40,7 @@ export const sendTestBroadcastSchema = z.object({
     .email('Email inválido'),
 });
 
-export const generateBroadcastImageUploadUrlSchema = z.object({
+export const uploadBroadcastImageSchema = z.object({
   composerId: z.string().uuid(),
 });
 

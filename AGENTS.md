@@ -314,7 +314,7 @@ Common errors:
 
 1. **Denormalized Progress**: `current_amount` on products table for fast catalog reads
 2. **Atomic Transactions**: All donation writes wrapped in DB transactions
-3. **Signed URLs**: Direct client-to-Spaces uploads bypass the server (requires CORS on the Spaces buckets)
+3. **Uploads**: QR/product/receipt uploads use signed client-to-Spaces URLs (and require CORS); optimized broadcast images pass through an authenticated Server Action
 4. **Drizzle Lightweight**: Better cold-start performance than Prisma
 
 ## Security

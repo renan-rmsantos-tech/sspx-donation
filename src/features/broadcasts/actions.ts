@@ -9,15 +9,16 @@ import { broadcasts } from '@/lib/db/schema';
 import { getSession } from '@/lib/auth/session';
 import {
   copyStorageObject,
+  deleteStorageObjectsOlderThan,
   deleteStorageObject,
-  generateSignedUploadUrl,
+  uploadFileDirect,
 } from '@/lib/storage/spaces';
 import { getPublicUrl } from '@/lib/storage/public-url';
 import {
   deleteTemporaryBroadcastImageSchema,
-  generateBroadcastImageUploadUrlSchema,
   sendBroadcastSchema,
   sendTestBroadcastSchema,
+  uploadBroadcastImageSchema,
 } from './schemas';
 import { getBroadcastRecipientEmails } from './queries';
 import {
@@ -46,10 +47,12 @@ interface BroadcastResult {
 }
 
 interface BroadcastImageUploadResult {
-  signedUrl: string;
   path: string;
   publicUrl: string;
 }
+
+const BROADCAST_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+const TEMPORARY_IMAGE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 function replaceBlockImagePath(
   content: BroadcastContentV1,
@@ -107,32 +110,80 @@ async function promoteBroadcastImages(
   };
 }
 
-export async function generateBroadcastImageUploadUrl(
-  input: unknown
+export async function uploadBroadcastImage(
+  formData: FormData
 ): Promise<ActionResult<BroadcastImageUploadResult>> {
   try {
     const session = await getSession();
     if (!session.isAdmin) return { success: false, error: 'UNAUTHORIZED' };
 
-    const { composerId } =
-      generateBroadcastImageUploadUrlSchema.parse(input);
+    const { composerId } = uploadBroadcastImageSchema.parse({
+      composerId: formData.get('composerId'),
+    });
+    const file = formData.get('file');
+    if (!(file instanceof Blob)) {
+      return {
+        success: false,
+        error: 'VALIDATION_ERROR',
+        details: { message: 'Selecione uma imagem para enviar.' },
+      };
+    }
+    if (
+      file.type !== 'image/jpeg' ||
+      file.size === 0 ||
+      file.size > BROADCAST_IMAGE_MAX_BYTES
+    ) {
+      return {
+        success: false,
+        error: 'VALIDATION_ERROR',
+        details: {
+          message: 'A imagem otimizada deve ser um JPEG de até 2 MB.',
+        },
+      };
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    if (
+      bytes.length < 4 ||
+      bytes[0] !== 0xff ||
+      bytes[1] !== 0xd8 ||
+      bytes[2] !== 0xff
+    ) {
+      return {
+        success: false,
+        error: 'VALIDATION_ERROR',
+        details: { message: 'O arquivo enviado não é uma imagem JPEG válida.' },
+      };
+    }
+
+    try {
+      await deleteStorageObjectsOlderThan(
+        'broadcast-images',
+        'temporary/',
+        new Date(Date.now() - TEMPORARY_IMAGE_MAX_AGE_MS)
+      );
+    } catch (cleanupError) {
+      console.error('broadcast temporary image cleanup error:', cleanupError);
+    }
+
     const path = `temporary/${composerId}/${randomUUID()}.jpg`;
-    const { signedUrl } = await generateSignedUploadUrl(
+    await uploadFileDirect(
       'broadcast-images',
       path,
-      { contentType: 'image/jpeg', publicRead: true }
+      arrayBuffer,
+      { contentType: 'image/jpeg' }
     );
 
     return {
       success: true,
       data: {
-        signedUrl,
         path,
         publicUrl: getPublicUrl('broadcast-images', path),
       },
     };
   } catch (error) {
-    console.error('generateBroadcastImageUploadUrl error:', error);
+    console.error('uploadBroadcastImage error:', error);
     if (error instanceof ZodError) {
       return {
         success: false,

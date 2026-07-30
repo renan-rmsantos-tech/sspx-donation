@@ -2,6 +2,7 @@ import {
   CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -129,6 +130,51 @@ export const deleteStorageObject = async (
       error
     );
   }
+};
+
+export const deleteStorageObjectsOlderThan = async (
+  bucket: string,
+  prefix: string,
+  olderThan: Date
+): Promise<number> => {
+  const bucketName = getBucketName(bucket);
+  let continuationToken: string | undefined;
+  let deletedCount = 0;
+
+  do {
+    const result = await getClient().send(
+      new ListObjectsV2Command({
+        Bucket: bucketName,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      })
+    );
+    const staleKeys = (result.Contents ?? [])
+      .filter(
+        (object) =>
+          object.Key &&
+          object.LastModified &&
+          object.LastModified < olderThan
+      )
+      .map((object) => object.Key as string);
+
+    await Promise.all(
+      staleKeys.map((path) =>
+        getClient().send(
+          new DeleteObjectCommand({
+            Bucket: bucketName,
+            Key: path,
+          })
+        )
+      )
+    );
+    deletedCount += staleKeys.length;
+    continuationToken = result.IsTruncated
+      ? result.NextContinuationToken
+      : undefined;
+  } while (continuationToken);
+
+  return deletedCount;
 };
 
 export const copyStorageObject = async (

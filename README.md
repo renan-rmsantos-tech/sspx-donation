@@ -199,7 +199,7 @@ Dockerfile               # Imagem de produção
 
 - Confirme as variáveis `DO_SPACES_*` (endpoint, região, credenciais e os quatro buckets)
 - Os buckets precisam existir no Spaces: `receipts` (privado), `pix-qr`, `product-photos` e `broadcast-images` (públicos)
-- Uploads assinados são feitos direto do browser: o Spaces precisa de **CORS liberado** para a origem do site
+- QR Code, fotos de produtos e comprovantes usam uploads assinados direto do browser e precisam de **CORS liberado**. Imagens de comunicados passam pelo servidor autenticado.
 - Imagens não aparecem? Confira `NEXT_PUBLIC_SPACES_*_URL`; para buckets consumidos por `next/image`, confira também os `remotePatterns` em `next.config.ts`
 
 ---
