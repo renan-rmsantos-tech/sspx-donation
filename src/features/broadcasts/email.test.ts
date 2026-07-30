@@ -77,6 +77,7 @@ describe('broadcast email renderer', () => {
       subject: 'Agradecimento',
       content,
       senderName: 'Pe. João Maria',
+      signatureText: 'Com gratidão e orações,',
       date: new Date('2026-07-29T15:00:00-03:00'),
     });
 
@@ -89,6 +90,7 @@ describe('broadcast email renderer', () => {
       'https://broadcast-images.nyc3.digitaloceanspaces.com/temporary/'
     );
     expect(html).toContain('alt="Aluno no trator &amp; ajudando"');
+    expect(html).toContain('Com gratidão e orações,');
     expect(html).toContain('Pe. João Maria');
   });
 
@@ -130,12 +132,15 @@ describe('broadcast email renderer', () => {
     const text = renderBroadcastEmailText(
       content,
       'Pe. João Maria',
-      new Date('2026-07-29T15:00:00-03:00')
+      new Date('2026-07-29T15:00:00-03:00'),
+      'Recebam nosso agradecimento,\ncom nossas orações.'
     );
 
     expect(text).toContain('Estimados benfeitores do Colégio São José.');
     expect(text).toContain('Novo equipamento');
-    expect(text).toContain('Nos Corações de Jesus e Maria');
+    expect(text).toContain(
+      'Recebam nosso agradecimento,\ncom nossas orações.'
+    );
     expect(text).toContain('Pe. João Maria');
   });
 

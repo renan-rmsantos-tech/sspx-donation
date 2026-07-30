@@ -1,5 +1,6 @@
 import {
   BroadcastContentV1,
+  DEFAULT_BROADCAST_SIGNATURE,
   RichTextMark,
   RichTextNode,
   extractBroadcastPlainText,
@@ -112,6 +113,7 @@ interface RenderBroadcastEmailOptions {
   subject: string;
   content: BroadcastContentV1;
   senderName: string;
+  signatureText?: string;
   date?: Date;
 }
 
@@ -119,10 +121,15 @@ export function renderBroadcastEmailHtml({
   subject,
   content,
   senderName,
+  signatureText = DEFAULT_BROADCAST_SIGNATURE,
   date = new Date(),
 }: RenderBroadcastEmailOptions): string {
   const safeSubject = escapeHtml(subject);
   const safeSender = escapeHtml(senderName.trim());
+  const safeSignature = escapeHtml(signatureText.trim()).replace(
+    /\r?\n/g,
+    '<br />'
+  );
   const logoUrl = `${getSiteUrl()}/logo.png`;
   const blocks = content.blocks.map(renderBlock).join('');
 
@@ -161,7 +168,7 @@ export function renderBroadcastEmailHtml({
             <tr>
               <td class="letter-padding" style="padding:8px 32px 28px;color:#23201D;font-family:Georgia,'Times New Roman',serif;font-size:16px;line-height:1.55;">
                 <div style="padding-top:16px;border-top:1px solid #E5DFD4;">
-                  Nos Corações de Jesus e Maria,<br />
+                  ${safeSignature ? `${safeSignature}<br />` : ''}
                   <strong>${safeSender}</strong>
                 </div>
               </td>
@@ -187,8 +194,12 @@ export function renderBroadcastEmailHtml({
 export function renderBroadcastEmailText(
   content: BroadcastContentV1,
   senderName: string,
-  date = new Date()
+  date = new Date(),
+  signatureText = DEFAULT_BROADCAST_SIGNATURE
 ): string {
   const body = extractBroadcastPlainText(content);
-  return `${formatLetterDate(date)}\n\n${body}\n\nNos Corações de Jesus e Maria,\n${senderName.trim()}\n\nPara entrar em contato: ${REPLY_EMAIL}`;
+  const signature = [signatureText.trim(), senderName.trim()]
+    .filter(Boolean)
+    .join('\n');
+  return `${formatLetterDate(date)}\n\n${body}\n\n${signature}\n\nPara entrar em contato: ${REPLY_EMAIL}`;
 }

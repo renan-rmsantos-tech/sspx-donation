@@ -1,8 +1,14 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { donations, broadcasts } from '@/lib/db/schema';
-import { isNotNull, desc } from 'drizzle-orm';
+import { donations, broadcasts, broadcastDrafts } from '@/lib/db/schema';
+import { getSession } from '@/lib/auth/session';
+import { isNotNull, desc, eq } from 'drizzle-orm';
+import {
+  BroadcastDraftSnapshot,
+  broadcastDraftContentSchema,
+  extractBroadcastImagePaths,
+} from './content';
 
 /**
  * Returns the number of unique donor email addresses that would receive a broadcast.
@@ -51,3 +57,76 @@ export async function listBroadcasts() {
   }
 }
 
+export async function getBroadcastDraft(): Promise<BroadcastDraftSnapshot | null> {
+  try {
+    const session = await getSession();
+    if (!session.isAdmin || !session.username) return null;
+
+    const rows = await db
+      .select()
+      .from(broadcastDrafts)
+      .where(eq(broadcastDrafts.adminUsername, session.username))
+      .limit(1);
+    const draft = rows[0];
+    if (!draft) return null;
+
+    const content = broadcastDraftContentSchema.safeParse(draft.content);
+    if (!content.success) {
+      console.error('getBroadcastDraft invalid stored content:', content.error);
+      return null;
+    }
+
+    return {
+      composerId: draft.composerId,
+      subject: draft.subject,
+      senderName: draft.senderName,
+      signatureText: draft.signatureText,
+      bccEmail: draft.bccEmail ?? '',
+      testEmail: draft.testEmail ?? '',
+      content: content.data,
+      updatedAt: draft.updatedAt.toISOString(),
+    };
+  } catch (error) {
+    console.error('getBroadcastDraft error:', error);
+    return null;
+  }
+}
+
+export async function getAllBroadcastDraftImagePaths(): Promise<string[] | null> {
+  try {
+    const rows = await db
+      .select({ content: broadcastDrafts.content })
+      .from(broadcastDrafts);
+
+    return Array.from(
+      new Set(
+        rows.flatMap((row) => {
+          const content = broadcastDraftContentSchema.safeParse(row.content);
+          return content.success
+            ? extractBroadcastImagePaths(content.data)
+            : [];
+        })
+      )
+    );
+  } catch (error) {
+    console.error('getAllBroadcastDraftImagePaths error:', error);
+    return null;
+  }
+}
+
+export async function getBroadcastDraftImagePaths(
+  adminUsername: string
+): Promise<string[]> {
+  try {
+    const rows = await db
+      .select({ content: broadcastDrafts.content })
+      .from(broadcastDrafts)
+      .where(eq(broadcastDrafts.adminUsername, adminUsername))
+      .limit(1);
+    const content = broadcastDraftContentSchema.safeParse(rows[0]?.content);
+    return content.success ? extractBroadcastImagePaths(content.data) : [];
+  } catch (error) {
+    console.error('getBroadcastDraftImagePaths error:', error);
+    return [];
+  }
+}

@@ -80,7 +80,7 @@ ssh-copy-id -i deploy_key.pub USER@DROPLET_HOST   # ou anexe em ~/.ssh/authorize
 
 - Buckets usados: `receipts` (**privado** — comprovantes), `pix-qr`, `product-photos` e `broadcast-images` (**públicos** — ACL `public-read` aplicada no upload).
 - Downloads de comprovantes usam URLs assinadas (5 min); os uploads de QR Code, fotos de produtos e comprovantes vão direto do browser e exigem **CORS liberado** (método `PUT`) para a origem do site.
-- Imagens de comunicados passam pelo Server Action autenticado (até 2 MB após otimização), sem depender de CORS. A aplicação remove objetos em `temporary/` com mais de 7 dias oportunisticamente em novos uploads; uma regra de ciclo de vida equivalente no bucket é uma proteção adicional opcional.
+- Imagens de comunicados passam pelo Server Action autenticado (até 2 MB após otimização), sem depender de CORS. A aplicação remove objetos em `temporary/` com mais de 7 dias oportunisticamente em novos uploads, exceto imagens ainda referenciadas por um rascunho salvo; uma regra de ciclo de vida no bucket não deve remover esses objetos sem aplicar a mesma exceção.
 - As URLs públicas ficam em `NEXT_PUBLIC_SPACES_*_URL`. Os buckets consumidos pelo componente `next/image` também precisam estar nos `remotePatterns` de `next.config.ts`.
 
 ## Migrações em produção

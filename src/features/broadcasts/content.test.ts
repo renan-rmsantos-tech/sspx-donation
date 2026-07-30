@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   BroadcastContentV1,
   broadcastContentSchema,
+  broadcastDraftContentSchema,
   createEmptyRichTextDocument,
   extractBroadcastPlainText,
+  extractBroadcastImagePaths,
 } from './content';
 
 const ids = [
@@ -247,6 +249,33 @@ describe('broadcast content schema', () => {
     }
   });
 
+  it('allows an empty text block while saving a draft', () => {
+    const result = broadcastDraftContentSchema.safeParse({
+      version: 1,
+      blocks: [
+        {
+          id: ids[0],
+          type: 'text',
+          richText: createEmptyRichTextDocument(),
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    expect(
+      broadcastContentSchema.safeParse({
+        version: 1,
+        blocks: [
+          {
+            id: ids[0],
+            type: 'text',
+            richText: createEmptyRichTextDocument(),
+          },
+        ],
+      }).success
+    ).toBe(false);
+  });
+
   it('rejects paths outside the broadcast image prefixes', () => {
     const result = broadcastContentSchema.safeParse({
       version: 1,
@@ -301,5 +330,30 @@ describe('broadcast content schema', () => {
     expect(extractBroadcastPlainText(content)).toBe(
       'Primeiro parágrafo.\nSegundo parágrafo.\n\nLegenda da foto.'
     );
+  });
+
+  it('extracts unique image paths used by a draft', () => {
+    const path = imagePath(1);
+    expect(
+      extractBroadcastImagePaths({
+        blocks: [
+          {
+            id: ids[0],
+            type: 'image',
+            image: { path, alt: 'Primeira imagem' },
+          },
+          {
+            id: ids[1],
+            type: 'image',
+            image: { path, alt: 'Imagem duplicada' },
+          },
+          {
+            id: ids[2],
+            type: 'text',
+            richText: createEmptyRichTextDocument(),
+          },
+        ],
+      })
+    ).toEqual([path]);
   });
 });

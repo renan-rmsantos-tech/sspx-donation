@@ -4,8 +4,9 @@ import { revalidatePath } from 'next/cache';
 import { ZodError } from 'zod';
 import { Resend } from 'resend';
 import { randomUUID } from 'node:crypto';
+import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { broadcasts } from '@/lib/db/schema';
+import { broadcasts, broadcastDrafts } from '@/lib/db/schema';
 import { getSession } from '@/lib/auth/session';
 import {
   copyStorageObject,
@@ -16,13 +17,19 @@ import {
 import { getPublicUrl } from '@/lib/storage/public-url';
 import {
   deleteTemporaryBroadcastImageSchema,
+  saveBroadcastDraftSchema,
   sendBroadcastSchema,
   sendTestBroadcastSchema,
   uploadBroadcastImageSchema,
 } from './schemas';
-import { getBroadcastRecipientEmails } from './queries';
+import {
+  getAllBroadcastDraftImagePaths,
+  getBroadcastDraftImagePaths,
+  getBroadcastRecipientEmails,
+} from './queries';
 import {
   BroadcastContentV1,
+  extractBroadcastImagePaths,
   extractBroadcastPlainText,
 } from './content';
 import {
@@ -49,6 +56,10 @@ interface BroadcastResult {
 interface BroadcastImageUploadResult {
   path: string;
   publicUrl: string;
+}
+
+interface BroadcastDraftResult {
+  updatedAt: string;
 }
 
 const BROADCAST_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
@@ -110,6 +121,18 @@ async function promoteBroadcastImages(
   };
 }
 
+async function clearBroadcastDraft(adminUsername: string): Promise<void> {
+  const imagePaths = await getBroadcastDraftImagePaths(adminUsername);
+  await db
+    .delete(broadcastDrafts)
+    .where(eq(broadcastDrafts.adminUsername, adminUsername));
+  await Promise.all(
+    imagePaths
+      .filter((path) => path.startsWith('temporary/'))
+      .map((path) => deleteStorageObject('broadcast-images', path))
+  );
+}
+
 export async function uploadBroadcastImage(
   formData: FormData
 ): Promise<ActionResult<BroadcastImageUploadResult>> {
@@ -158,11 +181,15 @@ export async function uploadBroadcastImage(
     }
 
     try {
-      await deleteStorageObjectsOlderThan(
-        'broadcast-images',
-        'temporary/',
-        new Date(Date.now() - TEMPORARY_IMAGE_MAX_AGE_MS)
-      );
+      const savedDraftImagePaths = await getAllBroadcastDraftImagePaths();
+      if (savedDraftImagePaths) {
+        await deleteStorageObjectsOlderThan(
+          'broadcast-images',
+          'temporary/',
+          new Date(Date.now() - TEMPORARY_IMAGE_MAX_AGE_MS),
+          savedDraftImagePaths
+        );
+      }
     } catch (cleanupError) {
       console.error('broadcast temporary image cleanup error:', cleanupError);
     }
@@ -195,6 +222,103 @@ export async function uploadBroadcastImage(
       success: false,
       error: 'STORAGE_ERROR',
       details: { message: 'Não foi possível preparar o upload da imagem.' },
+    };
+  }
+}
+
+export async function saveBroadcastDraft(
+  input: unknown
+): Promise<ActionResult<BroadcastDraftResult>> {
+  try {
+    const session = await getSession();
+    if (!session.isAdmin || !session.username) {
+      return { success: false, error: 'UNAUTHORIZED' };
+    }
+
+    const validated = saveBroadcastDraftSchema.parse(input);
+    const previousImagePaths = await getBroadcastDraftImagePaths(
+      session.username
+    );
+    const currentImagePaths = new Set(
+      extractBroadcastImagePaths(validated.content)
+    );
+    const updatedAt = new Date();
+
+    const rows = await db
+      .insert(broadcastDrafts)
+      .values({
+        adminUsername: session.username,
+        composerId: validated.composerId,
+        subject: validated.subject,
+        senderName: validated.senderName,
+        signatureText: validated.signatureText,
+        bccEmail: validated.bccEmail || null,
+        testEmail: validated.testEmail || null,
+        content: validated.content,
+        updatedAt,
+      })
+      .onConflictDoUpdate({
+        target: broadcastDrafts.adminUsername,
+        set: {
+          composerId: validated.composerId,
+          subject: validated.subject,
+          senderName: validated.senderName,
+          signatureText: validated.signatureText,
+          bccEmail: validated.bccEmail || null,
+          testEmail: validated.testEmail || null,
+          content: validated.content,
+          updatedAt,
+        },
+      })
+      .returning({ updatedAt: broadcastDrafts.updatedAt });
+
+    await Promise.all(
+      previousImagePaths
+        .filter(
+          (path) =>
+            path.startsWith('temporary/') && !currentImagePaths.has(path)
+        )
+        .map((path) => deleteStorageObject('broadcast-images', path))
+    );
+
+    revalidatePath('/admin/comunicacoes');
+    return {
+      success: true,
+      data: { updatedAt: (rows[0]?.updatedAt ?? updatedAt).toISOString() },
+    };
+  } catch (error) {
+    console.error('saveBroadcastDraft error:', error);
+    if (error instanceof ZodError) {
+      return {
+        success: false,
+        error: 'VALIDATION_ERROR',
+        details: error.flatten(),
+      };
+    }
+    return {
+      success: false,
+      error: 'INTERNAL_ERROR',
+      details: { message: 'Não foi possível salvar o rascunho.' },
+    };
+  }
+}
+
+export async function deleteBroadcastDraft(): Promise<ActionResult<null>> {
+  try {
+    const session = await getSession();
+    if (!session.isAdmin || !session.username) {
+      return { success: false, error: 'UNAUTHORIZED' };
+    }
+
+    await clearBroadcastDraft(session.username);
+    revalidatePath('/admin/comunicacoes');
+    return { success: true, data: null };
+  } catch (error) {
+    console.error('deleteBroadcastDraft error:', error);
+    return {
+      success: false,
+      error: 'INTERNAL_ERROR',
+      details: { message: 'Não foi possível descartar o rascunho.' },
     };
   }
 }
@@ -261,8 +385,14 @@ export async function sendBroadcastEmail(
       subject: validated.subject,
       content,
       senderName: validated.senderName,
+      signatureText: validated.signatureText,
     });
-    const text = renderBroadcastEmailText(content, validated.senderName);
+    const text = renderBroadcastEmailText(
+      content,
+      validated.senderName,
+      undefined,
+      validated.signatureText
+    );
 
     let successCount = 0;
     let failureCount = 0;
@@ -308,6 +438,7 @@ export async function sendBroadcastEmail(
         sentFailureCount: failureCount,
         sentBy: session.username || 'unknown',
         senderName: validated.senderName,
+        signatureText: validated.signatureText,
         content,
       })
       .returning({ id: broadcasts.id });
@@ -317,6 +448,14 @@ export async function sendBroadcastEmail(
         deleteStorageObject('broadcast-images', path)
       )
     );
+
+    if (session.username) {
+      try {
+        await clearBroadcastDraft(session.username);
+      } catch (cleanupError) {
+        console.error('broadcast draft cleanup after send error:', cleanupError);
+      }
+    }
 
     revalidatePath('/admin/comunicacoes');
 
@@ -370,10 +509,13 @@ export async function sendTestBroadcastEmail(
       subject: validated.subject,
       content: validated.content,
       senderName: validated.senderName,
+      signatureText: validated.signatureText,
     });
     const text = renderBroadcastEmailText(
       validated.content,
-      validated.senderName
+      validated.senderName,
+      undefined,
+      validated.signatureText
     );
 
     const result = await resend.emails.send({

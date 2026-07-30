@@ -135,9 +135,11 @@ export const deleteStorageObject = async (
 export const deleteStorageObjectsOlderThan = async (
   bucket: string,
   prefix: string,
-  olderThan: Date
+  olderThan: Date,
+  excludedPaths: readonly string[] = []
 ): Promise<number> => {
   const bucketName = getBucketName(bucket);
+  const excluded = new Set(excludedPaths);
   let continuationToken: string | undefined;
   let deletedCount = 0;
 
@@ -154,7 +156,8 @@ export const deleteStorageObjectsOlderThan = async (
         (object) =>
           object.Key &&
           object.LastModified &&
-          object.LastModified < olderThan
+          object.LastModified < olderThan &&
+          !excluded.has(object.Key)
       )
       .map((object) => object.Key as string);
 

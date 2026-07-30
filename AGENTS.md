@@ -135,7 +135,7 @@ Source of truth: `src/lib/db/schema.ts` (migrations in `src/lib/db/migrations/`)
    - id (UUID PK)
    - subject, message
    - recipientCount, sentSuccessCount, sentFailureCount
-   - sentBy, senderName
+   - sentBy, senderName, signatureText
    - content (nullable JSONB; versioned structured email blocks)
    - createdAt (indexed)
 
@@ -145,6 +145,13 @@ Source of truth: `src/lib/db/schema.ts` (migrations in `src/lib/db/migrations/`)
    - amount (in cents)
    - adminUsername
    - createdAt (indexed)
+
+8. **broadcast_drafts** - One persisted email draft per admin
+   - id (UUID PK), adminUsername (unique)
+   - composerId, subject, senderName, signatureText
+   - bccEmail, testEmail
+   - content (structured JSON blocks)
+   - createdAt, updatedAt
 
 ## Key Features Established
 
@@ -264,7 +271,7 @@ All mutations are implemented as Server Actions in Next.js (no API routes).
 
 ### Other admin features
 
-- **Broadcasts** (`features/broadcasts`) - send email announcements to past donors (Resend), with history
+- **Broadcasts** (`features/broadcasts`) - send email announcements to past donors (Resend), with history, inline images, editable signatures, and a persistent admin draft
 - **Fund transfers** (`admin/transfers`) - move funds between products, audited in `fund_transfers`
 - **Financeiro** (`admin/financeiro`) - donation listing with verification flag (`isVerified`)
 

@@ -31,6 +31,7 @@ import {
   MailCheck,
   Monitor,
   Plus,
+  Save,
   Send,
   Smartphone,
   Trash2,
@@ -39,6 +40,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,17 +53,23 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import {
+  deleteBroadcastDraft,
   deleteTemporaryBroadcastImage,
+  saveBroadcastDraft,
   sendBroadcastEmail,
   sendTestBroadcastEmail,
 } from '../actions';
 import {
   BROADCAST_MAX_IMAGES,
+  BROADCAST_SIGNATURE_MAX_LENGTH,
+  DEFAULT_BROADCAST_SIGNATURE,
   BroadcastBlock,
   BroadcastContentV1,
+  BroadcastDraftSnapshot,
   broadcastContentSchema,
   countBroadcastImages,
   createEmptyRichTextDocument,
+  extractBroadcastImagePaths,
   extractRichTextPlainText,
 } from '../content';
 import { EmailPreview } from './EmailPreview';
@@ -74,6 +82,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface BroadcastComposerProps {
   recipientCount: number;
+  initialDraft?: BroadcastDraftSnapshot | null;
 }
 
 type ImageDialogKind = 'image' | 'imageLeft' | 'imageRight';
@@ -106,6 +115,16 @@ function blockSummary(block: BroadcastBlock): string {
   if (text) return text;
   if (block.type === 'imageText') return block.image.alt;
   return 'Comece a escrever este bloco.';
+}
+
+function formatDraftUpdatedAt(value: string): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  }).format(new Date(value));
 }
 
 function errorDetail(result: { details?: unknown }, fallback: string): string {
@@ -270,13 +289,31 @@ function SortableBlock({
   );
 }
 
-export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
-  const [composerId, setComposerId] = useState(newId);
-  const [subject, setSubject] = useState('');
-  const [senderName, setSenderName] = useState('');
-  const [bccEmail, setBccEmail] = useState('');
-  const [testEmail, setTestEmail] = useState('');
-  const [blocks, setBlocks] = useState<BroadcastBlock[]>(() => [newTextBlock()]);
+export function BroadcastComposer({
+  recipientCount,
+  initialDraft = null,
+}: BroadcastComposerProps) {
+  const [composerId, setComposerId] = useState(
+    () => initialDraft?.composerId ?? newId()
+  );
+  const [subject, setSubject] = useState(() => initialDraft?.subject ?? '');
+  const [senderName, setSenderName] = useState(
+    () => initialDraft?.senderName ?? ''
+  );
+  const [signatureText, setSignatureText] = useState(
+    () => initialDraft?.signatureText ?? DEFAULT_BROADCAST_SIGNATURE
+  );
+  const [bccEmail, setBccEmail] = useState(
+    () => initialDraft?.bccEmail ?? ''
+  );
+  const [testEmail, setTestEmail] = useState(
+    () => initialDraft?.testEmail ?? ''
+  );
+  const [blocks, setBlocks] = useState<BroadcastBlock[]>(() =>
+    initialDraft
+      ? structuredClone(initialDraft.content.blocks)
+      : [newTextBlock()]
+  );
   const [selectedBlockId, setSelectedBlockId] = useState(() => blocks[0].id);
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>(
     'desktop'
@@ -285,9 +322,22 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
   const [imageDialogKind, setImageDialogKind] =
     useState<ImageDialogKind | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDiscarding, setIsDiscarding] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [hasDraft, setHasDraft] = useState(initialDraft !== null);
+  const [draftUpdatedAt, setDraftUpdatedAt] = useState(
+    initialDraft?.updatedAt ?? null
+  );
+  const [savedDraftImagePaths, setSavedDraftImagePaths] = useState<Set<string>>(
+    () =>
+      new Set(
+        initialDraft ? extractBroadcastImagePaths(initialDraft.content) : []
+      )
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -303,7 +353,7 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
   const bccValid =
     bccEmail.trim().length === 0 || EMAIL_REGEX.test(bccEmail.trim());
   const testEmailValid = EMAIL_REGEX.test(testEmail.trim());
-  const busy = isSending || isTesting;
+  const busy = isSending || isTesting || isSaving || isDiscarding;
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -419,7 +469,11 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
       },
     });
 
-    if (removed.type !== 'text' && removed.image.path.startsWith('temporary/')) {
+    if (
+      removed.type !== 'text' &&
+      removed.image.path.startsWith('temporary/') &&
+      !savedDraftImagePaths.has(removed.image.path)
+    ) {
       const stillUsed = nextBlocks.some(
         (block) =>
           block.type !== 'text' && block.image.path === removed.image.path
@@ -442,6 +496,34 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
       return arrayMove(current, oldIndex, newIndex);
     });
     markDirty();
+  };
+
+  const handleSaveDraft = async () => {
+    setIsSaving(true);
+    const result = await saveBroadcastDraft({
+      composerId,
+      subject,
+      senderName,
+      signatureText,
+      bccEmail,
+      testEmail,
+      content,
+    });
+    setIsSaving(false);
+
+    if (result.success && result.data) {
+      setHasDraft(true);
+      setDraftUpdatedAt(result.data.updatedAt);
+      setSavedDraftImagePaths(new Set(extractBroadcastImagePaths(content)));
+      setIsDirty(false);
+      toast.success('Rascunho salvo.');
+    } else if (result.error === 'UNAUTHORIZED') {
+      toast.error('Sua sessão expirou. Entre novamente.');
+    } else {
+      toast.error(
+        errorDetail(result, 'Não foi possível salvar o rascunho.')
+      );
+    }
   };
 
   const validateComposer = (requiresTestEmail: boolean): boolean => {
@@ -475,6 +557,7 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
     const result = await sendTestBroadcastEmail({
       subject: subject.trim(),
       senderName: senderName.trim(),
+      signatureText,
       content,
       testEmail: testEmail.trim(),
     });
@@ -515,6 +598,7 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
     setComposerId(newId());
     setSubject('');
     setSenderName('');
+    setSignatureText(DEFAULT_BROADCAST_SIGNATURE);
     setBccEmail('');
     setTestEmail('');
     setBlocks([firstBlock]);
@@ -522,6 +606,36 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
     setPreviewMode('desktop');
     setMobilePane('editor');
     setIsDirty(false);
+    setHasDraft(false);
+    setDraftUpdatedAt(null);
+    setSavedDraftImagePaths(new Set());
+  };
+
+  const handleDiscardDraft = async () => {
+    setDiscardConfirmOpen(false);
+    setIsDiscarding(true);
+    const result = await deleteBroadcastDraft();
+
+    if (result.success) {
+      const unsavedTemporaryPaths = extractBroadcastImagePaths(content).filter(
+        (path) =>
+          path.startsWith('temporary/') && !savedDraftImagePaths.has(path)
+      );
+      await Promise.all(
+        unsavedTemporaryPaths.map((path) =>
+          deleteTemporaryBroadcastImage({ path })
+        )
+      );
+      resetComposer();
+      toast.success('Rascunho descartado.');
+    } else if (result.error === 'UNAUTHORIZED') {
+      toast.error('Sua sessão expirou. Entre novamente.');
+    } else {
+      toast.error(
+        errorDetail(result, 'Não foi possível descartar o rascunho.')
+      );
+    }
+    setIsDiscarding(false);
   };
 
   const handleConfirmedSend = async () => {
@@ -530,6 +644,7 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
     const result = await sendBroadcastEmail({
       subject: subject.trim(),
       senderName: senderName.trim(),
+      signatureText,
       content,
       bccEmail: bccEmail.trim() || undefined,
     });
@@ -571,16 +686,52 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
       className="min-w-0 overflow-hidden rounded-xl border border-[#CDBD9F] bg-white"
       aria-labelledby="broadcast-editor-heading"
     >
-      <div className="border-b border-[#E5DFD4] px-4 py-5 sm:px-6">
-        <h2
-          id="broadcast-editor-heading"
-          className="text-lg font-semibold text-[#1E3D59]"
-        >
-          Montar comunicado
-        </h2>
-        <p className="mt-1 text-sm text-[#536A7B]">
-          Adicione e organize os blocos na ordem em que serão lidos.
-        </p>
+      <div className="flex flex-col gap-4 border-b border-[#E5DFD4] px-4 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+        <div>
+          <h2
+            id="broadcast-editor-heading"
+            className="text-lg font-semibold text-[#1E3D59]"
+          >
+            Montar comunicado
+          </h2>
+          <p className="mt-1 text-sm text-[#536A7B]">
+            Adicione e organize os blocos na ordem em que serão lidos.
+          </p>
+          {draftUpdatedAt && (
+            <p className="mt-2 text-xs font-medium text-[#486579]">
+              Rascunho salvo em {formatDraftUpdatedAt(draftUpdatedAt)}
+              {isDirty ? ' · há alterações não salvas' : ''}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {hasDraft && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDiscardConfirmOpen(true)}
+              disabled={busy}
+              className="h-11 text-[#A33232] hover:bg-[#FDECEC] hover:text-[#8C2F2F]"
+            >
+              <Trash2 aria-hidden="true" />
+              Descartar
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleSaveDraft}
+            disabled={busy || (hasDraft && !isDirty)}
+            className="h-11 bg-white"
+          >
+            {isSaving ? (
+              <Loader2 className="animate-spin" aria-hidden="true" />
+            ) : (
+              <Save aria-hidden="true" />
+            )}
+            {isSaving ? 'Salvando…' : 'Salvar rascunho'}
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-5 border-b border-[#E5DFD4] px-4 py-5 sm:grid-cols-2 sm:px-6">
@@ -600,6 +751,27 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
           />
           <p className="mt-1 text-right text-xs text-[#657887]">
             {subject.length}/{SUBJECT_MAX}
+          </p>
+        </div>
+        <div className="sm:col-span-2">
+          <Label htmlFor="broadcast-signature-text">
+            Texto acima do nome na assinatura
+          </Label>
+          <Textarea
+            id="broadcast-signature-text"
+            value={signatureText}
+            maxLength={BROADCAST_SIGNATURE_MAX_LENGTH}
+            rows={2}
+            disabled={busy}
+            onChange={(event) => {
+              setSignatureText(event.target.value);
+              markDirty();
+            }}
+            placeholder="Ex.: Nos Corações de Jesus e Maria,"
+            className="mt-2 resize-y"
+          />
+          <p className="mt-1 text-right text-xs text-[#657887]">
+            {signatureText.length}/{BROADCAST_SIGNATURE_MAX_LENGTH}
           </p>
         </div>
         <div>
@@ -853,7 +1025,10 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
               value={testEmail}
               disabled={busy}
               aria-invalid={testEmail.length > 0 && !testEmailValid}
-              onChange={(event) => setTestEmail(event.target.value)}
+              onChange={(event) => {
+                setTestEmail(event.target.value);
+                markDirty();
+              }}
               placeholder="voce@exemplo.com"
               className="h-11 flex-1 bg-white"
             />
@@ -952,6 +1127,7 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
           <EmailPreview
             subject={subject}
             senderName={senderName}
+            signatureText={signatureText}
             content={content}
             mode={previewMode}
             onModeChange={setPreviewMode}
@@ -992,6 +1168,33 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
               disabled={isSending}
             >
               Enviar para {recipientCount} destinatário(s)
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={discardConfirmOpen}
+        onOpenChange={setDiscardConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Descartar este rascunho?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O conteúdo salvo e as imagens vinculadas serão removidos. Esta
+              ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDiscarding}>
+              Continuar editando
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDiscardDraft}
+              disabled={isDiscarding}
+              className="bg-[#A33232] text-white hover:bg-[#8C2F2F]"
+            >
+              {isDiscarding ? 'Descartando…' : 'Descartar rascunho'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

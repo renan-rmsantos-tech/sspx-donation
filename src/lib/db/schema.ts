@@ -88,6 +88,7 @@ export const broadcasts = pgTable(
     sentFailureCount: integer('sent_failure_count').notNull().default(0),
     sentBy: text('sent_by').notNull(),
     senderName: text('sender_name'),
+    signatureText: text('signature_text'),
     content: jsonb('content').$type<BroadcastContentV1>(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
@@ -95,6 +96,20 @@ export const broadcasts = pgTable(
     createdAtIdx: index('broadcasts_created_at_idx').on(t.createdAt),
   })
 );
+
+export const broadcastDrafts = pgTable('broadcast_drafts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  adminUsername: text('admin_username').notNull().unique(),
+  composerId: uuid('composer_id').notNull(),
+  subject: text('subject').notNull().default(''),
+  senderName: text('sender_name').notNull().default(''),
+  signatureText: text('signature_text').notNull(),
+  bccEmail: text('bcc_email'),
+  testEmail: text('test_email'),
+  content: jsonb('content').$type<BroadcastContentV1>().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
 
 export const fundTransfers = pgTable(
   'fund_transfers',

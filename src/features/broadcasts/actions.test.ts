@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  deleteBroadcastDraft,
   deleteTemporaryBroadcastImage,
+  saveBroadcastDraft,
   sendBroadcastEmail,
   sendTestBroadcastEmail,
   uploadBroadcastImage,
@@ -13,7 +15,11 @@ import {
   deleteStorageObject,
   uploadFileDirect,
 } from '@/lib/storage/spaces';
-import { getBroadcastRecipientEmails } from './queries';
+import {
+  getAllBroadcastDraftImagePaths,
+  getBroadcastDraftImagePaths,
+  getBroadcastRecipientEmails,
+} from './queries';
 import type { BroadcastContentV1 } from './content';
 
 const { resendSend } = vi.hoisted(() => ({
@@ -29,6 +35,7 @@ vi.mock('resend', () => ({
 vi.mock('@/lib/db', () => ({
   db: {
     insert: vi.fn(),
+    delete: vi.fn(),
   },
 }));
 
@@ -51,6 +58,8 @@ vi.mock('@/lib/storage/public-url', () => ({
 }));
 
 vi.mock('./queries', () => ({
+  getAllBroadcastDraftImagePaths: vi.fn(),
+  getBroadcastDraftImagePaths: vi.fn(),
   getBroadcastRecipientEmails: vi.fn(),
 }));
 
@@ -100,6 +109,8 @@ describe('broadcast actions', () => {
     vi.mocked(getBroadcastRecipientEmails).mockResolvedValue([
       'doador@example.com',
     ]);
+    vi.mocked(getAllBroadcastDraftImagePaths).mockResolvedValue([]);
+    vi.mocked(getBroadcastDraftImagePaths).mockResolvedValue([]);
     resendSend.mockResolvedValue({
       data: { id: 'email-id' },
       error: null,
@@ -116,6 +127,12 @@ describe('broadcast actions', () => {
           values: () => ({
             returning: () => Promise.resolve([{ id: 'broadcast-id' }]),
           }),
+        }) as never
+    );
+    vi.mocked(db.delete).mockImplementation(
+      () =>
+        ({
+          where: () => Promise.resolve(),
         }) as never
     );
   });
@@ -158,7 +175,8 @@ describe('broadcast actions', () => {
     expect(deleteStorageObjectsOlderThan).toHaveBeenCalledWith(
       'broadcast-images',
       'temporary/',
-      expect.any(Date)
+      expect.any(Date),
+      []
     );
     expect(uploadFileDirect).toHaveBeenCalledWith(
       'broadcast-images',
@@ -203,10 +221,89 @@ describe('broadcast actions', () => {
     );
   });
 
+  it('upserts an incomplete draft and removes images no longer referenced', async () => {
+    const removedPath =
+      'temporary/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/cccccccc-cccc-4ccc-8ccc-cccccccccccc.jpg';
+    let insertedValues: Record<string, unknown> | undefined;
+    vi.mocked(getBroadcastDraftImagePaths).mockResolvedValueOnce([
+      removedPath,
+    ]);
+    vi.mocked(db.insert).mockImplementationOnce(
+      () =>
+        ({
+          values: (values: Record<string, unknown>) => {
+            insertedValues = values;
+            return {
+              onConflictDoUpdate: () => ({
+                returning: () =>
+                  Promise.resolve([
+                    { updatedAt: new Date('2026-07-30T02:15:00Z') },
+                  ]),
+              }),
+            };
+          },
+        }) as never
+    );
+
+    const result = await saveBroadcastDraft({
+      composerId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      subject: '',
+      senderName: '',
+      signatureText: 'Com gratidão,',
+      bccEmail: '',
+      testEmail: '',
+      content: {
+        version: 1,
+        blocks: [
+          {
+            id: '11111111-1111-4111-8111-111111111111',
+            type: 'text',
+            richText: {
+              type: 'doc',
+              content: [{ type: 'paragraph' }],
+            },
+          },
+        ],
+      },
+    });
+
+    expect(result).toEqual({
+      success: true,
+      data: { updatedAt: '2026-07-30T02:15:00.000Z' },
+    });
+    expect(insertedValues).toEqual(
+      expect.objectContaining({
+        adminUsername: 'admin',
+        subject: '',
+        signatureText: 'Com gratidão,',
+      })
+    );
+    expect(deleteStorageObject).toHaveBeenCalledWith(
+      'broadcast-images',
+      removedPath
+    );
+  });
+
+  it('deletes the saved draft and its temporary images', async () => {
+    vi.mocked(getBroadcastDraftImagePaths).mockResolvedValueOnce([
+      temporaryPath,
+    ]);
+
+    const result = await deleteBroadcastDraft();
+
+    expect(result).toEqual({ success: true, data: null });
+    expect(db.delete).toHaveBeenCalled();
+    expect(deleteStorageObject).toHaveBeenCalledWith(
+      'broadcast-images',
+      temporaryPath
+    );
+  });
+
   it('sends a test with matching HTML and plain-text alternatives', async () => {
     const result = await sendTestBroadcastEmail({
       subject: 'Agradecimento',
       senderName: 'Pe. João Maria',
+      signatureText: 'Com gratidão,',
       testEmail: 'teste@example.com',
       content,
     });
@@ -219,8 +316,8 @@ describe('broadcast actions', () => {
       expect.objectContaining({
         to: 'teste@example.com',
         subject: '[TESTE] Agradecimento',
-        html: expect.stringContaining('Mensagem aos benfeitores.'),
-        text: expect.stringContaining('Mensagem aos benfeitores.'),
+        html: expect.stringContaining('Com gratidão,'),
+        text: expect.stringContaining('Com gratidão,'),
       })
     );
     expect(db.insert).not.toHaveBeenCalled();
@@ -244,6 +341,7 @@ describe('broadcast actions', () => {
     const result = await sendBroadcastEmail({
       subject: 'Agradecimento',
       senderName: 'Pe. João Maria',
+      signatureText: 'Com gratidão,',
       content,
     });
 
@@ -259,6 +357,7 @@ describe('broadcast actions', () => {
       temporaryPath
     );
     expect(insertedValues?.message).toBe('Mensagem aos benfeitores.');
+    expect(insertedValues?.signatureText).toBe('Com gratidão,');
     expect(insertedValues?.content).toEqual(
       expect.objectContaining({
         version: 1,

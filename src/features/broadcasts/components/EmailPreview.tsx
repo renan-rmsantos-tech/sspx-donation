@@ -9,6 +9,7 @@ import { renderBroadcastEmailHtml } from '../email';
 interface EmailPreviewProps {
   subject: string;
   senderName: string;
+  signatureText: string;
   content: BroadcastContentV1;
   mode: 'desktop' | 'mobile';
   onModeChange: (mode: 'desktop' | 'mobile') => void;
@@ -17,6 +18,7 @@ interface EmailPreviewProps {
 export function EmailPreview({
   subject,
   senderName,
+  signatureText,
   content,
   mode,
   onModeChange,
@@ -24,6 +26,7 @@ export function EmailPreview({
   const html = renderBroadcastEmailHtml({
     subject: subject.trim() || 'Prévia do comunicado',
     senderName: senderName.trim() || 'Responsável pelo comunicado',
+    signatureText,
     content,
   });
 
@@ -93,4 +96,3 @@ export function EmailPreview({
     </section>
   );
 }
-

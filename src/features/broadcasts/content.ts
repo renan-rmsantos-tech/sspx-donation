@@ -4,6 +4,8 @@ export const BROADCAST_CONTENT_VERSION = 1 as const;
 export const BROADCAST_MAX_BLOCKS = 20;
 export const BROADCAST_MAX_IMAGES = 5;
 export const BROADCAST_MAX_TEXT_LENGTH = 5000;
+export const BROADCAST_SIGNATURE_MAX_LENGTH = 300;
+export const DEFAULT_BROADCAST_SIGNATURE = 'Nos Corações de Jesus e Maria,';
 
 export type RichTextAlignment = 'left' | 'center' | 'right';
 
@@ -68,6 +70,20 @@ export type BroadcastBlock =
 export interface BroadcastContentV1 {
   version: typeof BROADCAST_CONTENT_VERSION;
   blocks: BroadcastBlock[];
+}
+
+export interface BroadcastDraftState {
+  composerId: string;
+  subject: string;
+  senderName: string;
+  signatureText: string;
+  bccEmail: string;
+  testEmail: string;
+  content: BroadcastContentV1;
+}
+
+export interface BroadcastDraftSnapshot extends BroadcastDraftState {
+  updatedAt: string;
 }
 
 const ALLOWED_NODE_TYPES = new Set<RichTextNode['type']>([
@@ -291,49 +307,63 @@ const broadcastBlockSchema = z.discriminatedUnion('type', [
   }),
 ]);
 
-export const broadcastContentSchema = z
-  .object({
-    version: z.literal(BROADCAST_CONTENT_VERSION),
-    blocks: z
-      .array(broadcastBlockSchema)
-      .min(1, 'Adicione pelo menos um bloco ao comunicado.')
-      .max(
-        BROADCAST_MAX_BLOCKS,
-        `O comunicado pode ter no máximo ${BROADCAST_MAX_BLOCKS} blocos.`
-      ),
-  })
-  .superRefine((content, ctx) => {
-    const imageCount = content.blocks.filter(
-      (block) => block.type === 'image' || block.type === 'imageText'
-    ).length;
-    if (imageCount > BROADCAST_MAX_IMAGES) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `O comunicado pode ter no máximo ${BROADCAST_MAX_IMAGES} imagens.`,
-        path: ['blocks'],
-      });
-    }
+const broadcastContentBaseSchema = z.object({
+  version: z.literal(BROADCAST_CONTENT_VERSION),
+  blocks: z
+    .array(broadcastBlockSchema)
+    .min(1, 'Adicione pelo menos um bloco ao comunicado.')
+    .max(
+      BROADCAST_MAX_BLOCKS,
+      `O comunicado pode ter no máximo ${BROADCAST_MAX_BLOCKS} blocos.`
+    ),
+});
 
-    const text = extractBroadcastPlainText(content);
-    if (text.length > BROADCAST_MAX_TEXT_LENGTH) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `O texto deve ter no máximo ${BROADCAST_MAX_TEXT_LENGTH} caracteres.`,
-        path: ['blocks'],
-      });
-    }
+function validateBroadcastContent(
+  content: BroadcastContentV1,
+  ctx: z.RefinementCtx,
+  requireMessage: boolean
+) {
+  const imageCount = content.blocks.filter(
+    (block) => block.type === 'image' || block.type === 'imageText'
+  ).length;
+  if (imageCount > BROADCAST_MAX_IMAGES) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `O comunicado pode ter no máximo ${BROADCAST_MAX_IMAGES} imagens.`,
+      path: ['blocks'],
+    });
+  }
 
-    if (
-      text.trim().length === 0 &&
-      content.blocks.every((block) => block.type === 'text')
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Escreva uma mensagem ou adicione uma imagem.',
-        path: ['blocks'],
-      });
-    }
-  });
+  const text = extractBroadcastPlainText(content);
+  if (text.length > BROADCAST_MAX_TEXT_LENGTH) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `O texto deve ter no máximo ${BROADCAST_MAX_TEXT_LENGTH} caracteres.`,
+      path: ['blocks'],
+    });
+  }
+
+  if (
+    requireMessage &&
+    text.trim().length === 0 &&
+    content.blocks.every((block) => block.type === 'text')
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Escreva uma mensagem ou adicione uma imagem.',
+      path: ['blocks'],
+    });
+  }
+}
+
+export const broadcastDraftContentSchema =
+  broadcastContentBaseSchema.superRefine((content, ctx) =>
+    validateBroadcastContent(content, ctx, false)
+  );
+
+export const broadcastContentSchema = broadcastContentBaseSchema.superRefine(
+  (content, ctx) => validateBroadcastContent(content, ctx, true)
+);
 
 export function createEmptyRichTextDocument(): RichTextDocument {
   return {
@@ -385,4 +415,16 @@ export function countBroadcastImages(content: BroadcastContentV1): number {
   return content.blocks.filter(
     (block) => block.type === 'image' || block.type === 'imageText'
   ).length;
+}
+
+export function extractBroadcastImagePaths(
+  content: Pick<BroadcastContentV1, 'blocks'>
+): string[] {
+  return Array.from(
+    new Set(
+      content.blocks.flatMap((block) =>
+        block.type === 'text' ? [] : [block.image.path]
+      )
+    )
+  );
 }

@@ -1,9 +1,15 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { toast } from 'sonner';
 import { BroadcastComposer } from './BroadcastComposer';
+import {
+  deleteBroadcastDraft,
+  saveBroadcastDraft,
+} from '../actions';
 
 vi.mock('../actions', () => ({
+  saveBroadcastDraft: vi.fn(),
+  deleteBroadcastDraft: vi.fn(),
   sendBroadcastEmail: vi.fn(),
   sendTestBroadcastEmail: vi.fn(),
   deleteTemporaryBroadcastImage: vi.fn(),
@@ -13,6 +19,14 @@ vi.mock('../actions', () => ({
 describe('BroadcastComposer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(saveBroadcastDraft).mockResolvedValue({
+      success: true,
+      data: { updatedAt: '2026-07-30T02:15:00.000Z' },
+    });
+    vi.mocked(deleteBroadcastDraft).mockResolvedValue({
+      success: true,
+      data: null,
+    });
   });
 
   it('starts with one editable text block and recipient context', async () => {
@@ -26,6 +40,73 @@ describe('BroadcastComposer', () => {
     expect(
       await screen.findByLabelText('Texto do bloco Texto')
     ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText('Texto acima do nome na assinatura')
+    ).toHaveValue('Nos Corações de Jesus e Maria,');
+  });
+
+  it('restores and saves the complete draft state', async () => {
+    render(
+      <BroadcastComposer
+        recipientCount={12}
+        initialDraft={{
+          composerId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          subject: 'Notícias do colégio',
+          senderName: 'Pe. João',
+          signatureText: 'Com gratidão,',
+          bccEmail: 'secretaria@example.com',
+          testEmail: 'teste@example.com',
+          content: {
+            version: 1,
+            blocks: [
+              {
+                id: '11111111-1111-4111-8111-111111111111',
+                type: 'text',
+                richText: {
+                  type: 'doc',
+                  content: [
+                    {
+                      type: 'paragraph',
+                      content: [{ type: 'text', text: 'Texto salvo.' }],
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+          updatedAt: '2026-07-30T02:15:00.000Z',
+        }}
+      />
+    );
+
+    expect(screen.getByLabelText('Assunto')).toHaveValue(
+      'Notícias do colégio'
+    );
+    expect(
+      screen.getByLabelText('Texto acima do nome na assinatura')
+    ).toHaveValue('Com gratidão,');
+    expect(screen.getByText(/Rascunho salvo em/)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Assunto'), {
+      target: { value: 'Notícias atualizadas' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Salvar rascunho' })
+    );
+
+    await waitFor(() =>
+      expect(saveBroadcastDraft).toHaveBeenCalledWith(
+        expect.objectContaining({
+          composerId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          subject: 'Notícias atualizadas',
+          senderName: 'Pe. João',
+          signatureText: 'Com gratidão,',
+          bccEmail: 'secretaria@example.com',
+          testEmail: 'teste@example.com',
+        })
+      )
+    );
+    expect(toast.success).toHaveBeenCalledWith('Rascunho salvo.');
   });
 
   it('adds another text block and exposes it in the ordered structure', () => {

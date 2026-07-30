@@ -1,6 +1,7 @@
 import { BroadcastComposer } from '@/features/broadcasts/components/BroadcastComposer';
 import { BroadcastHistory } from '@/features/broadcasts/components/BroadcastHistory';
 import {
+  getBroadcastDraft,
   getBroadcastRecipientCount,
   listBroadcasts,
 } from '@/features/broadcasts/queries';
@@ -8,9 +9,10 @@ import {
 export const dynamic = 'force-dynamic';
 
 export default async function ComunicacoesPage() {
-  const [recipientCount, history] = await Promise.all([
+  const [recipientCount, history, draft] = await Promise.all([
     getBroadcastRecipientCount(),
     listBroadcasts(),
+    getBroadcastDraft(),
   ]);
 
   return (
@@ -26,7 +28,7 @@ export default async function ComunicacoesPage() {
         </p>
       </div>
 
-      <BroadcastComposer recipientCount={recipientCount} />
+      <BroadcastComposer recipientCount={recipientCount} initialDraft={draft} />
 
       <BroadcastHistory items={history} />
     </div>
