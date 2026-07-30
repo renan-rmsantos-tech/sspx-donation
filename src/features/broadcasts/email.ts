@@ -58,7 +58,15 @@ function renderRichTextNode(node: RichTextNode): string {
     return `<ul style="margin:0 0 14px;padding-left:24px;">${children}</ul>`;
   }
   if (node.type === 'orderedList') {
-    return `<ol style="margin:0 0 14px;padding-left:24px;">${children}</ol>`;
+    const start =
+      typeof node.attrs?.start === 'number' && node.attrs.start !== 1
+        ? ` start="${node.attrs.start}"`
+        : '';
+    const type =
+      node.attrs?.type && ['1', 'a', 'A', 'i', 'I'].includes(node.attrs.type)
+        ? ` type="${node.attrs.type}"`
+        : '';
+    return `<ol${start}${type} style="margin:0 0 14px;padding-left:24px;">${children}</ol>`;
   }
   if (node.type === 'listItem') {
     return `<li style="margin:0 0 6px;">${children}</li>`;
@@ -184,4 +192,3 @@ export function renderBroadcastEmailText(
   const body = extractBroadcastPlainText(content);
   return `${formatLetterDate(date)}\n\n${body}\n\nNos Corações de Jesus e Maria,\n${senderName.trim()}\n\nPara entrar em contato: ${REPLY_EMAIL}`;
 }
-

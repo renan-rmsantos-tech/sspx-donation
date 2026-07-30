@@ -7,7 +7,7 @@ vi.mock('../actions', () => ({
   sendBroadcastEmail: vi.fn(),
   sendTestBroadcastEmail: vi.fn(),
   deleteTemporaryBroadcastImage: vi.fn(),
-  generateBroadcastImageUploadUrl: vi.fn(),
+  uploadBroadcastImage: vi.fn(),
 }));
 
 describe('BroadcastComposer', () => {
@@ -62,4 +62,3 @@ describe('BroadcastComposer', () => {
     );
   });
 });
-

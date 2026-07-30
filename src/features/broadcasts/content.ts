@@ -28,6 +28,8 @@ export interface RichTextNode {
     | 'hardBreak';
   attrs?: {
     textAlign?: RichTextAlignment | null;
+    start?: number | null;
+    type?: '1' | 'a' | 'A' | 'i' | 'I' | null;
   };
   content?: RichTextNode[];
   marks?: RichTextMark[];
@@ -141,13 +143,37 @@ function validateRichTextNode(
       return false;
     }
     const keys = Object.keys(value.attrs);
+    const allowedKeys =
+      type === 'paragraph'
+        ? new Set(['textAlign'])
+        : type === 'orderedList'
+          ? new Set(['start', 'type'])
+          : new Set<string>();
+    const invalidTextAlignment =
+      type === 'paragraph' &&
+      value.attrs.textAlign !== undefined &&
+      value.attrs.textAlign !== null &&
+      !['left', 'center', 'right'].includes(String(value.attrs.textAlign));
+    const invalidListStart =
+      type === 'orderedList' &&
+      value.attrs.start !== undefined &&
+      value.attrs.start !== null &&
+      (!Number.isInteger(value.attrs.start) ||
+        Number(value.attrs.start) < 1 ||
+        Number(value.attrs.start) > 9999);
+    const invalidListType =
+      type === 'orderedList' &&
+      value.attrs.type !== undefined &&
+      value.attrs.type !== null &&
+      !['1', 'a', 'A', 'i', 'I'].includes(String(value.attrs.type));
+
     if (
-      keys.some((key) => key !== 'textAlign') ||
-      (value.attrs.textAlign !== undefined &&
-        value.attrs.textAlign !== null &&
-        !['left', 'center', 'right'].includes(String(value.attrs.textAlign)))
+      keys.some((key) => !allowedKeys.has(key)) ||
+      invalidTextAlignment ||
+      invalidListStart ||
+      invalidListType
     ) {
-      issues.push('O alinhamento do texto é inválido.');
+      issues.push('Os atributos do texto são inválidos.');
       return false;
     }
   }
@@ -333,4 +359,3 @@ export function countBroadcastImages(content: BroadcastContentV1): number {
     (block) => block.type === 'image' || block.type === 'imageText'
   ).length;
 }
-

@@ -104,6 +104,67 @@ describe('broadcast content schema', () => {
     }
   });
 
+  it('accepts the canonical attributes emitted by Tiptap ordered lists', () => {
+    const result = broadcastContentSchema.safeParse({
+      version: 1,
+      blocks: [
+        {
+          id: ids[0],
+          type: 'text',
+          richText: {
+            type: 'doc',
+            content: [
+              {
+                type: 'orderedList',
+                attrs: { start: 1, type: null },
+                content: [
+                  {
+                    type: 'listItem',
+                    content: [
+                      {
+                        type: 'paragraph',
+                        attrs: { textAlign: null },
+                        content: [
+                          { type: 'text', text: 'Primeiro item' },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('continues to reject unknown rich-text attributes', () => {
+    const result = broadcastContentSchema.safeParse({
+      version: 1,
+      blocks: [
+        {
+          id: ids[0],
+          type: 'text',
+          richText: {
+            type: 'doc',
+            content: [
+              {
+                type: 'orderedList',
+                attrs: { start: 1, onclick: 'alert(1)' },
+                content: [],
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it('rejects more than five images', () => {
     const result = broadcastContentSchema.safeParse({
       version: 1,
@@ -181,4 +242,3 @@ describe('broadcast content schema', () => {
     );
   });
 });
-

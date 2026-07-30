@@ -117,6 +117,26 @@ function errorDetail(result: { details?: unknown }, fallback: string): string {
   ) {
     return result.details.message;
   }
+  if (result.details && typeof result.details === 'object') {
+    if (
+      'formErrors' in result.details &&
+      Array.isArray(result.details.formErrors) &&
+      typeof result.details.formErrors[0] === 'string'
+    ) {
+      return result.details.formErrors[0];
+    }
+    if (
+      'fieldErrors' in result.details &&
+      result.details.fieldErrors &&
+      typeof result.details.fieldErrors === 'object'
+    ) {
+      for (const messages of Object.values(result.details.fieldErrors)) {
+        if (Array.isArray(messages) && typeof messages[0] === 'string') {
+          return messages[0];
+        }
+      }
+    }
+  }
   return fallback;
 }
 
@@ -465,7 +485,12 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
     } else if (result.error === 'UNAUTHORIZED') {
       toast.error('Sua sessão expirou. Entre novamente.');
     } else if (result.error === 'VALIDATION_ERROR') {
-      toast.error('Revise os campos e o conteúdo do comunicado.');
+      toast.error(
+        errorDetail(
+          result,
+          'Revise os campos e o conteúdo do comunicado.'
+        )
+      );
     } else {
       toast.error(
         errorDetail(
@@ -525,7 +550,12 @@ export function BroadcastComposer({ recipientCount }: BroadcastComposerProps) {
     } else if (result.error === 'UNAUTHORIZED') {
       toast.error('Sua sessão expirou. Entre novamente.');
     } else if (result.error === 'VALIDATION_ERROR') {
-      toast.error('Revise os campos e o conteúdo do comunicado.');
+      toast.error(
+        errorDetail(
+          result,
+          'Revise os campos e o conteúdo do comunicado.'
+        )
+      );
     } else {
       toast.error(
         errorDetail(

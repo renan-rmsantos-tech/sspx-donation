@@ -138,5 +138,46 @@ describe('broadcast email renderer', () => {
     expect(text).toContain('Nos Corações de Jesus e Maria');
     expect(text).toContain('Pe. João Maria');
   });
-});
 
+  it('renders supported ordered-list attributes without dropping numbering', () => {
+    const listContent: BroadcastContentV1 = {
+      version: 1,
+      blocks: [
+        {
+          id: '11111111-1111-4111-8111-111111111111',
+          type: 'text',
+          richText: {
+            type: 'doc',
+            content: [
+              {
+                type: 'orderedList',
+                attrs: { start: 3, type: 'a' },
+                content: [
+                  {
+                    type: 'listItem',
+                    content: [
+                      {
+                        type: 'paragraph',
+                        attrs: { textAlign: null },
+                        content: [{ type: 'text', text: 'Terceiro item' }],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const html = renderBroadcastEmailHtml({
+      subject: 'Lista',
+      content: listContent,
+      senderName: 'Responsável',
+    });
+
+    expect(html).toContain('<ol start="3" type="a"');
+    expect(html).toContain('Terceiro item');
+  });
+});
