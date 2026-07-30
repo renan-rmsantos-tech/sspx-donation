@@ -143,6 +143,59 @@ describe('broadcast content schema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts nullable attributes emitted by Tiptap', () => {
+    const result = broadcastContentSchema.safeParse({
+      version: 1,
+      blocks: [
+        {
+          id: ids[0],
+          type: 'text',
+          richText: {
+            type: 'doc',
+            attrs: null,
+            content: [
+              {
+                type: 'paragraph',
+                attrs: null,
+                content: [
+                  {
+                    type: 'text',
+                    attrs: null,
+                    text: 'Texto sem atributos',
+                    marks: [{ type: 'bold', attrs: null }],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.blocks[0]).toEqual({
+        id: ids[0],
+        type: 'text',
+        richText: {
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: 'Texto sem atributos',
+                  marks: [{ type: 'bold' }],
+                },
+              ],
+            },
+          ],
+        },
+      });
+    }
+  });
+
   it('strips unknown editor attributes before storing or rendering content', () => {
     const result = broadcastContentSchema.safeParse({
       version: 1,

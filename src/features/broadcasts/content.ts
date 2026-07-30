@@ -153,7 +153,10 @@ function validateRichTextNode(
     return false;
   }
 
-  if (value.attrs !== undefined) {
+  // Tiptap serializes nodes without attributes in both forms depending on the
+  // extension/source: the property may be omitted or explicitly set to null.
+  // The sanitizer below rebuilds every supported attribute from an allowlist.
+  if (value.attrs !== undefined && value.attrs !== null) {
     if (!isPlainRecord(value.attrs)) {
       issues.push('Os atributos do texto são inválidos.');
       return false;
