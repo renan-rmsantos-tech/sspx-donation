@@ -141,7 +141,7 @@ describe('broadcast content schema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('continues to reject unknown rich-text attributes', () => {
+  it('strips unknown editor attributes before storing or rendering content', () => {
     const result = broadcastContentSchema.safeParse({
       version: 1,
       blocks: [
@@ -150,11 +150,39 @@ describe('broadcast content schema', () => {
           type: 'text',
           richText: {
             type: 'doc',
+            attrs: { trackedChanges: true },
             content: [
               {
                 type: 'orderedList',
-                attrs: { start: 1, onclick: 'alert(1)' },
-                content: [],
+                attrs: { start: 3, type: 'a', onclick: 'alert(1)' },
+                content: [
+                  {
+                    type: 'listItem',
+                    attrs: { class: 'pasted-list-item' },
+                    content: [
+                      {
+                        type: 'paragraph',
+                        attrs: {
+                          textAlign: 'center',
+                          style: 'background:url(javascript:alert(1))',
+                        },
+                        content: [
+                          {
+                            type: 'text',
+                            text: 'Conteúdo seguro',
+                            attrs: { spellcheck: true },
+                            marks: [
+                              {
+                                type: 'bold',
+                                attrs: { onclick: 'alert(1)' },
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
               },
             ],
           },
@@ -162,7 +190,40 @@ describe('broadcast content schema', () => {
       ],
     });
 
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.blocks[0]).toEqual({
+        id: ids[0],
+        type: 'text',
+        richText: {
+          type: 'doc',
+          content: [
+            {
+              type: 'orderedList',
+              attrs: { start: 3, type: 'a' },
+              content: [
+                {
+                  type: 'listItem',
+                  content: [
+                    {
+                      type: 'paragraph',
+                      attrs: { textAlign: 'center' },
+                      content: [
+                        {
+                          type: 'text',
+                          text: 'Conteúdo seguro',
+                          marks: [{ type: 'bold' }],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      });
+    }
   });
 
   it('rejects more than five images', () => {

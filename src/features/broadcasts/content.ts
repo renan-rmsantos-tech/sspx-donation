@@ -142,40 +142,6 @@ function validateRichTextNode(
       issues.push('Os atributos do texto são inválidos.');
       return false;
     }
-    const keys = Object.keys(value.attrs);
-    const allowedKeys =
-      type === 'paragraph'
-        ? new Set(['textAlign'])
-        : type === 'orderedList'
-          ? new Set(['start', 'type'])
-          : new Set<string>();
-    const invalidTextAlignment =
-      type === 'paragraph' &&
-      value.attrs.textAlign !== undefined &&
-      value.attrs.textAlign !== null &&
-      !['left', 'center', 'right'].includes(String(value.attrs.textAlign));
-    const invalidListStart =
-      type === 'orderedList' &&
-      value.attrs.start !== undefined &&
-      value.attrs.start !== null &&
-      (!Number.isInteger(value.attrs.start) ||
-        Number(value.attrs.start) < 1 ||
-        Number(value.attrs.start) > 9999);
-    const invalidListType =
-      type === 'orderedList' &&
-      value.attrs.type !== undefined &&
-      value.attrs.type !== null &&
-      !['1', 'a', 'A', 'i', 'I'].includes(String(value.attrs.type));
-
-    if (
-      keys.some((key) => !allowedKeys.has(key)) ||
-      invalidTextAlignment ||
-      invalidListStart ||
-      invalidListType
-    ) {
-      issues.push('Os atributos do texto são inválidos.');
-      return false;
-    }
   }
 
   if (value.marks !== undefined) {
@@ -214,6 +180,65 @@ function validateRichTextNode(
   return true;
 }
 
+function sanitizeRichTextNode(node: RichTextNode): RichTextNode {
+  const sanitized: RichTextNode = { type: node.type };
+
+  if (node.type === 'text') {
+    sanitized.text = node.text ?? '';
+  }
+
+  if (node.type === 'paragraph') {
+    const textAlign = node.attrs?.textAlign;
+    if (
+      textAlign === 'left' ||
+      textAlign === 'center' ||
+      textAlign === 'right'
+    ) {
+      sanitized.attrs = { textAlign };
+    }
+  }
+
+  if (node.type === 'orderedList') {
+    const attrs: NonNullable<RichTextNode['attrs']> = {};
+    if (
+      typeof node.attrs?.start === 'number' &&
+      Number.isInteger(node.attrs.start) &&
+      node.attrs.start >= 1 &&
+      node.attrs.start <= 9999
+    ) {
+      attrs.start = node.attrs.start;
+    }
+    if (
+      node.attrs?.type === '1' ||
+      node.attrs?.type === 'a' ||
+      node.attrs?.type === 'A' ||
+      node.attrs?.type === 'i' ||
+      node.attrs?.type === 'I'
+    ) {
+      attrs.type = node.attrs.type;
+    }
+    if (Object.keys(attrs).length > 0) sanitized.attrs = attrs;
+  }
+
+  if (node.marks) {
+    sanitized.marks = node.marks.map((mark) => {
+      if (mark.type === 'link') {
+        return {
+          type: 'link',
+          attrs: { href: mark.attrs?.href },
+        };
+      }
+      return { type: mark.type };
+    });
+  }
+
+  if (node.content) {
+    sanitized.content = node.content.map(sanitizeRichTextNode);
+  }
+
+  return sanitized;
+}
+
 const richTextDocumentSchema = z
   .unknown()
   .superRefine((value, ctx) => {
@@ -226,7 +251,9 @@ const richTextDocumentSchema = z
       }
     }
   })
-  .transform((value) => value as RichTextDocument);
+  .transform(
+    (value) => sanitizeRichTextNode(value as RichTextNode) as RichTextDocument
+  );
 
 const broadcastImageSchema = z.object({
   path: z
