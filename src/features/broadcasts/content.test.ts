@@ -6,6 +6,7 @@ import {
   createEmptyRichTextDocument,
   extractBroadcastPlainText,
   extractBroadcastImagePaths,
+  toPlainJson,
 } from './content';
 
 const ids = [
@@ -194,6 +195,101 @@ describe('broadcast content schema', () => {
         },
       });
     }
+  });
+
+  it('ignores Flight "$T" placeholders left by null-prototype TipTap attrs', () => {
+    const result = broadcastContentSchema.safeParse({
+      version: 1,
+      blocks: [
+        {
+          id: ids[0],
+          type: 'text',
+          richText: {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                attrs: '$T',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'Mensagem com atributos serializados pelo React Flight',
+                    marks: [{ type: 'bold', attrs: '$T' }],
+                  },
+                ],
+              },
+              {
+                type: 'orderedList',
+                attrs: '$T',
+                content: [
+                  {
+                    type: 'listItem',
+                    attrs: '$T',
+                    content: [
+                      {
+                        type: 'paragraph',
+                        attrs: '$T',
+                        content: [{ type: 'text', text: 'Item' }],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.blocks[0]).toEqual({
+        id: ids[0],
+        type: 'text',
+        richText: {
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: 'Mensagem com atributos serializados pelo React Flight',
+                  marks: [{ type: 'bold' }],
+                },
+              ],
+            },
+            {
+              type: 'orderedList',
+              content: [
+                {
+                  type: 'listItem',
+                  content: [
+                    {
+                      type: 'paragraph',
+                      content: [{ type: 'text', text: 'Item' }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      });
+    }
+  });
+
+  it('converts TipTap null-prototype attrs into plain JSON objects', () => {
+    const attrs = Object.create(null) as { textAlign: string };
+    attrs.textAlign = 'center';
+    const plain = toPlainJson({
+      type: 'paragraph',
+      attrs,
+      content: [{ type: 'text', text: 'Oi' }],
+    });
+
+    expect(Object.getPrototypeOf(plain.attrs)).toBe(Object.prototype);
+    expect(plain.attrs).toEqual({ textAlign: 'center' });
   });
 
   it('strips unknown editor attributes before storing or rendering content', () => {

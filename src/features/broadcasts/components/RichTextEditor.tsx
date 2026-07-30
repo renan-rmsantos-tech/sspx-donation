@@ -23,7 +23,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import type { RichTextDocument } from '../content';
+import { toPlainJson, type RichTextDocument } from '../content';
 
 interface RichTextEditorProps {
   value: RichTextDocument;
@@ -56,7 +56,8 @@ export function RichTextEditor({
     editable: !disabled,
     immediatelyRender: false,
     onUpdate: ({ editor: currentEditor }) => {
-      onChange(currentEditor.getJSON() as RichTextDocument);
+      // TipTap attrs use null-prototype objects; plainify for Server Actions.
+      onChange(toPlainJson(currentEditor.getJSON() as RichTextDocument));
     },
     editorProps: {
       attributes: {

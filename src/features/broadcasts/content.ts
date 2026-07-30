@@ -117,6 +117,16 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
+/**
+ * TipTap/ProseMirror emits `attrs` via `Object.create(null)`. Next.js Server
+ * Actions cannot serialize null-prototype objects in production — they become
+ * the placeholder string `"$T"`. Always convert editor JSON before storing it
+ * in React state or sending it across the server-action boundary.
+ */
+export function toPlainJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 function validateRichTextNode(
   value: unknown,
   issues: string[],
@@ -153,15 +163,9 @@ function validateRichTextNode(
     return false;
   }
 
-  // Tiptap serializes nodes without attributes in both forms depending on the
-  // extension/source: the property may be omitted or explicitly set to null.
-  // The sanitizer below rebuilds every supported attribute from an allowlist.
-  if (value.attrs !== undefined && value.attrs !== null) {
-    if (!isPlainRecord(value.attrs)) {
-      issues.push('Os atributos do texto são inválidos.');
-      return false;
-    }
-  }
+  // Attrs may be omitted, null, a plain object, or (if a null-prototype TipTap
+  // object crossed a Server Action) the Flight placeholder "$T". The sanitizer
+  // only reads an allowlisted plain-object shape, so non-objects are ignored.
 
   if (value.marks !== undefined) {
     if (!Array.isArray(value.marks)) {
@@ -201,13 +205,14 @@ function validateRichTextNode(
 
 function sanitizeRichTextNode(node: RichTextNode): RichTextNode {
   const sanitized: RichTextNode = { type: node.type };
+  const sourceAttrs = isPlainRecord(node.attrs) ? node.attrs : undefined;
 
   if (node.type === 'text') {
     sanitized.text = node.text ?? '';
   }
 
   if (node.type === 'paragraph') {
-    const textAlign = node.attrs?.textAlign;
+    const textAlign = sourceAttrs?.textAlign;
     if (
       textAlign === 'left' ||
       textAlign === 'center' ||
@@ -220,21 +225,21 @@ function sanitizeRichTextNode(node: RichTextNode): RichTextNode {
   if (node.type === 'orderedList') {
     const attrs: NonNullable<RichTextNode['attrs']> = {};
     if (
-      typeof node.attrs?.start === 'number' &&
-      Number.isInteger(node.attrs.start) &&
-      node.attrs.start >= 1 &&
-      node.attrs.start <= 9999
+      typeof sourceAttrs?.start === 'number' &&
+      Number.isInteger(sourceAttrs.start) &&
+      sourceAttrs.start >= 1 &&
+      sourceAttrs.start <= 9999
     ) {
-      attrs.start = node.attrs.start;
+      attrs.start = sourceAttrs.start;
     }
     if (
-      node.attrs?.type === '1' ||
-      node.attrs?.type === 'a' ||
-      node.attrs?.type === 'A' ||
-      node.attrs?.type === 'i' ||
-      node.attrs?.type === 'I'
+      sourceAttrs?.type === '1' ||
+      sourceAttrs?.type === 'a' ||
+      sourceAttrs?.type === 'A' ||
+      sourceAttrs?.type === 'i' ||
+      sourceAttrs?.type === 'I'
     ) {
-      attrs.type = node.attrs.type;
+      attrs.type = sourceAttrs.type;
     }
     if (Object.keys(attrs).length > 0) sanitized.attrs = attrs;
   }
@@ -244,7 +249,11 @@ function sanitizeRichTextNode(node: RichTextNode): RichTextNode {
       if (mark.type === 'link') {
         return {
           type: 'link',
-          attrs: { href: mark.attrs?.href },
+          attrs: {
+            href: isPlainRecord(mark.attrs)
+              ? (mark.attrs.href as string | undefined)
+              : undefined,
+          },
         };
       }
       return { type: mark.type };

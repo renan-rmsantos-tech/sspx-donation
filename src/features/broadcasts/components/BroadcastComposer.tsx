@@ -71,6 +71,7 @@ import {
   createEmptyRichTextDocument,
   extractBroadcastImagePaths,
   extractRichTextPlainText,
+  toPlainJson,
 } from '../content';
 import { EmailPreview } from './EmailPreview';
 import { ImageBlockDialog } from './ImageBlockDialog';
@@ -344,7 +345,7 @@ export function BroadcastComposer({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
   const content = useMemo<BroadcastContentV1>(
-    () => ({ version: 1, blocks }),
+    () => toPlainJson({ version: 1 as const, blocks }),
     [blocks]
   );
   const selectedBlock =
