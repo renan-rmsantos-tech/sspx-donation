@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   deleteBroadcastDraft,
   deleteTemporaryBroadcastImage,
+  resendFailedBroadcastEmails,
   saveBroadcastDraft,
   sendBroadcastEmail,
   sendTestBroadcastEmail,
@@ -22,20 +23,24 @@ import {
 } from './queries';
 import type { BroadcastContentV1 } from './content';
 
-const { resendSend } = vi.hoisted(() => ({
+const { resendSend, resendBatchSend } = vi.hoisted(() => ({
   resendSend: vi.fn(),
+  resendBatchSend: vi.fn(),
 }));
 
 vi.mock('resend', () => ({
   Resend: vi.fn().mockImplementation(() => ({
     emails: { send: resendSend },
+    batch: { send: resendBatchSend },
   })),
 }));
 
 vi.mock('@/lib/db', () => ({
   db: {
     insert: vi.fn(),
+    update: vi.fn(),
     delete: vi.fn(),
+    select: vi.fn(),
   },
 }));
 
@@ -115,6 +120,12 @@ describe('broadcast actions', () => {
       data: { id: 'email-id' },
       error: null,
     });
+    resendBatchSend.mockImplementation(
+      async (emails: { to: string[] }[]) => ({
+        data: { data: emails.map(() => ({ id: 'email-id' })) },
+        error: null,
+      })
+    );
     vi.mocked(uploadFileDirect).mockResolvedValue({ path: temporaryPath });
     vi.mocked(deleteStorageObjectsOlderThan).mockResolvedValue(0);
     vi.mocked(copyStorageObject).mockResolvedValue({
@@ -135,7 +146,49 @@ describe('broadcast actions', () => {
           where: () => Promise.resolve(),
         }) as never
     );
+    vi.mocked(db.update).mockImplementation(
+      () =>
+        ({
+          set: () => ({ where: () => Promise.resolve() }),
+        }) as never
+    );
+    vi.mocked(db.select).mockImplementation(
+      () =>
+        ({
+          from: () => ({
+            where: () => ({ limit: () => Promise.resolve([]) }),
+          }),
+        }) as never
+    );
   });
+
+  function mockStoredBroadcast(overrides: Record<string, unknown> = {}) {
+    const row = {
+      id: '33333333-3333-4333-8333-333333333333',
+      subject: 'Agradecimento',
+      message: 'Mensagem aos benfeitores.',
+      recipientCount: 3,
+      sentSuccessCount: 1,
+      sentFailureCount: 2,
+      sentBy: 'admin',
+      senderName: 'Pe. João Maria',
+      signatureText: 'Com gratidão,',
+      bccEmail: null,
+      failedRecipients: ['falhou1@example.com', 'falhou2@example.com'],
+      content,
+      createdAt: new Date('2026-07-20T12:00:00Z'),
+      ...overrides,
+    };
+    vi.mocked(db.select).mockImplementation(
+      () =>
+        ({
+          from: () => ({
+            where: () => ({ limit: () => Promise.resolve([row]) }),
+          }),
+        }) as never
+    );
+    return row;
+  }
 
   function imageUploadForm(): FormData {
     const formData = new FormData();
@@ -371,5 +424,195 @@ describe('broadcast actions', () => {
         ]),
       })
     );
+  });
+
+  it('delivers recipients through a single batch request instead of one per email', async () => {
+    vi.mocked(getBroadcastRecipientEmails).mockResolvedValue([
+      'a@example.com',
+      'b@example.com',
+      'c@example.com',
+    ]);
+
+    const result = await sendBroadcastEmail({
+      subject: 'Agradecimento',
+      senderName: 'Pe. João Maria',
+      signatureText: 'Com gratidão,',
+      bccEmail: 'copia@example.com',
+      content,
+    });
+
+    expect(result.success).toBe(true);
+    expect(resendSend).not.toHaveBeenCalled();
+    expect(resendBatchSend).toHaveBeenCalledTimes(1);
+    const [emails, options] = resendBatchSend.mock.calls[0];
+    expect(emails).toHaveLength(3);
+    expect(emails[0]).toEqual(
+      expect.objectContaining({
+        to: ['a@example.com'],
+        bcc: ['copia@example.com'],
+        subject: 'Agradecimento',
+      })
+    );
+    expect(options).toEqual(
+      expect.objectContaining({ batchValidation: 'permissive' })
+    );
+    expect(result.data).toEqual(
+      expect.objectContaining({ successCount: 3, failureCount: 0 })
+    );
+  });
+
+  it('persists the recipients that failed so they can be resent later', async () => {
+    vi.mocked(getBroadcastRecipientEmails).mockResolvedValue([
+      'a@example.com',
+      'b@example.com',
+    ]);
+    resendBatchSend.mockResolvedValue({
+      data: {
+        data: [{ id: 'email-id' }],
+        errors: [{ index: 1, message: 'Invalid `to` field' }],
+      },
+      error: null,
+    });
+    let insertedValues: Record<string, unknown> | undefined;
+    vi.mocked(db.insert).mockImplementation(
+      () =>
+        ({
+          values: (values: Record<string, unknown>) => {
+            insertedValues = values;
+            return {
+              returning: () => Promise.resolve([{ id: values.id }]),
+            };
+          },
+        }) as never
+    );
+
+    const result = await sendBroadcastEmail({
+      subject: 'Agradecimento',
+      senderName: 'Pe. João Maria',
+      signatureText: 'Com gratidão,',
+      content,
+    });
+
+    expect(result.data).toEqual(
+      expect.objectContaining({ successCount: 1, failureCount: 1 })
+    );
+    expect(insertedValues?.failedRecipients).toEqual(['b@example.com']);
+    expect(insertedValues?.sentFailureCount).toBe(1);
+  });
+
+  it('resends only the pending recipients and clears them on success', async () => {
+    const stored = mockStoredBroadcast();
+    let updatedValues: Record<string, unknown> | undefined;
+    vi.mocked(db.update).mockImplementation(
+      () =>
+        ({
+          set: (values: Record<string, unknown>) => {
+            updatedValues = values;
+            return { where: () => Promise.resolve() };
+          },
+        }) as never
+    );
+
+    const result = await resendFailedBroadcastEmails({
+      broadcastId: stored.id,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({
+      broadcastId: stored.id,
+      retriedCount: 2,
+      successCount: 2,
+      failureCount: 0,
+    });
+    const [emails] = resendBatchSend.mock.calls[0];
+    expect(emails.map((e: { to: string[] }) => e.to)).toEqual([
+      ['falhou1@example.com'],
+      ['falhou2@example.com'],
+    ]);
+    // Original letter date is preserved on the retry.
+    expect(emails[0].html).toContain('Itatiba, 20 de julho de 2026');
+    expect(updatedValues).toEqual({
+      sentSuccessCount: 3,
+      sentFailureCount: 0,
+      failedRecipients: [],
+    });
+    expect(getBroadcastRecipientEmails).not.toHaveBeenCalled();
+  });
+
+  it('keeps the still-failing recipients after a partial resend', async () => {
+    const stored = mockStoredBroadcast();
+    resendBatchSend.mockResolvedValue({
+      data: {
+        data: [{ id: 'email-id' }],
+        errors: [{ index: 0, message: 'Invalid `to` field' }],
+      },
+      error: null,
+    });
+    let updatedValues: Record<string, unknown> | undefined;
+    vi.mocked(db.update).mockImplementation(
+      () =>
+        ({
+          set: (values: Record<string, unknown>) => {
+            updatedValues = values;
+            return { where: () => Promise.resolve() };
+          },
+        }) as never
+    );
+
+    const result = await resendFailedBroadcastEmails({
+      broadcastId: stored.id,
+    });
+
+    expect(result.data).toEqual(
+      expect.objectContaining({ successCount: 1, failureCount: 1 })
+    );
+    expect(updatedValues).toEqual({
+      sentSuccessCount: 2,
+      sentFailureCount: 1,
+      failedRecipients: ['falhou1@example.com'],
+    });
+  });
+
+  it('refuses to resend without an admin session', async () => {
+    mockStoredBroadcast();
+    vi.mocked(getSession).mockResolvedValueOnce({ isAdmin: false } as never);
+
+    const result = await resendFailedBroadcastEmails({
+      broadcastId: '33333333-3333-4333-8333-333333333333',
+    });
+
+    expect(result).toEqual({ success: false, error: 'UNAUTHORIZED' });
+    expect(resendBatchSend).not.toHaveBeenCalled();
+  });
+
+  it('reports when a broadcast has no pending recipients', async () => {
+    const stored = mockStoredBroadcast({ failedRecipients: [] });
+
+    const result = await resendFailedBroadcastEmails({
+      broadcastId: stored.id,
+    });
+
+    expect(result).toEqual({ success: false, error: 'NO_FAILED_RECIPIENTS' });
+    expect(resendBatchSend).not.toHaveBeenCalled();
+    expect(db.update).not.toHaveBeenCalled();
+  });
+
+  it('reports a missing broadcast', async () => {
+    const result = await resendFailedBroadcastEmails({
+      broadcastId: '33333333-3333-4333-8333-333333333333',
+    });
+
+    expect(result).toEqual({ success: false, error: 'NOT_FOUND' });
+  });
+
+  it('refuses to resend a broadcast stored without structured content', async () => {
+    const stored = mockStoredBroadcast({ content: null });
+
+    const result = await resendFailedBroadcastEmails({
+      broadcastId: stored.id,
+    });
+
+    expect(result.error).toBe('MISSING_CONTENT');
+    expect(resendBatchSend).not.toHaveBeenCalled();
   });
 });

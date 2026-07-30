@@ -67,6 +67,10 @@ export const saveBroadcastDraftSchema = z.object({
   content: broadcastDraftContentSchema,
 });
 
+export const resendBroadcastFailuresSchema = z.object({
+  broadcastId: z.string().uuid(),
+});
+
 export const uploadBroadcastImageSchema = z.object({
   composerId: z.string().uuid(),
 });
@@ -81,6 +85,9 @@ export const deleteTemporaryBroadcastImageSchema = z.object({
 });
 
 export type SendBroadcastInput = z.infer<typeof sendBroadcastSchema>;
+export type ResendBroadcastFailuresInput = z.infer<
+  typeof resendBroadcastFailuresSchema
+>;
 export type SendTestBroadcastInput = z.infer<typeof sendTestBroadcastSchema>;
 export type SaveBroadcastDraftInput = z.infer<
   typeof saveBroadcastDraftSchema

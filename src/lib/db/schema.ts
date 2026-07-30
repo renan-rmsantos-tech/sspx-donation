@@ -89,6 +89,9 @@ export const broadcasts = pgTable(
     sentBy: text('sent_by').notNull(),
     senderName: text('sender_name'),
     signatureText: text('signature_text'),
+    bccEmail: text('bcc_email'),
+    // Recipients still pending delivery; drives the "resend failures" action.
+    failedRecipients: jsonb('failed_recipients').$type<string[]>(),
     content: jsonb('content').$type<BroadcastContentV1>(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },

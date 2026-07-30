@@ -1,9 +1,15 @@
 import type { broadcasts } from '@/lib/db/schema';
+import { ResendFailuresButton } from './ResendFailuresButton';
 
 type Broadcast = typeof broadcasts.$inferSelect;
 
 interface BroadcastHistoryProps {
   items: Broadcast[];
+}
+
+/** Recipients still awaiting delivery — only these can be retried. */
+function pendingCount(b: Broadcast): number {
+  return b.failedRecipients?.length ?? 0;
 }
 
 function formatDateTime(d: Date): string {
@@ -44,7 +50,7 @@ export function BroadcastHistory({ items }: BroadcastHistoryProps) {
                   Assinado por {b.senderName}
                 </p>
               )}
-              <div className="mt-2 flex flex-wrap gap-2 text-[12px]">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px]">
                 <span className="rounded-full bg-[#EDF6EE] border border-[#9BC9A4] text-[#2D6A3F] px-3 py-[2px]">
                   {b.sentSuccessCount} enviados
                 </span>
@@ -56,6 +62,12 @@ export function BroadcastHistory({ items }: BroadcastHistoryProps) {
                 <span className="rounded-full bg-[#E8EEF4] border border-[#C5D4E2] text-[#1E3D59] px-3 py-[2px]">
                   {b.recipientCount} destinatário(s)
                 </span>
+                {pendingCount(b) > 0 && (
+                  <ResendFailuresButton
+                    broadcastId={b.id}
+                    failureCount={pendingCount(b)}
+                  />
+                )}
               </div>
             </li>
           ))}

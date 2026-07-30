@@ -657,7 +657,7 @@ export function BroadcastComposer({
         toast.success(`Comunicado enviado para ${successCount} destinatário(s).`);
       } else {
         toast.warning(
-          `Enviado para ${successCount}; ${failureCount} envio(s) falharam.`
+          `Enviado para ${successCount}; ${failureCount} envio(s) falharam. Use "Reenviar falhas" no histórico.`
         );
       }
       resetComposer();

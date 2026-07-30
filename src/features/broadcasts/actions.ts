@@ -17,6 +17,7 @@ import {
 import { getPublicUrl } from '@/lib/storage/public-url';
 import {
   deleteTemporaryBroadcastImageSchema,
+  resendBroadcastFailuresSchema,
   saveBroadcastDraftSchema,
   sendBroadcastSchema,
   sendTestBroadcastSchema,
@@ -36,6 +37,11 @@ import {
   renderBroadcastEmailHtml,
   renderBroadcastEmailText,
 } from './email';
+import {
+  BroadcastBatchResponse,
+  BroadcastBatchSend,
+  deliverBroadcastEmails,
+} from './delivery';
 
 interface ActionResult<T> {
   success: boolean;
@@ -44,13 +50,27 @@ interface ActionResult<T> {
   details?: unknown;
 }
 
-const BATCH_SIZE = 50;
-
 interface BroadcastResult {
   broadcastId: string;
   recipientCount: number;
   successCount: number;
   failureCount: number;
+}
+
+interface BroadcastResendResult {
+  broadcastId: string;
+  retriedCount: number;
+  successCount: number;
+  failureCount: number;
+}
+
+/**
+ * Adapts the Resend client to the narrow batch contract used by the delivery
+ * module, which keeps rate limiting and retries independent of the SDK types.
+ */
+function createBatchSender(resend: Resend): BroadcastBatchSend {
+  return (emails, options) =>
+    resend.batch.send(emails, options) as Promise<BroadcastBatchResponse>;
 }
 
 interface BroadcastImageUploadResult {
@@ -394,38 +414,20 @@ export async function sendBroadcastEmail(
       validated.signatureText
     );
 
-    let successCount = 0;
-    let failureCount = 0;
-
     const bcc = validated.bccEmail ? [validated.bccEmail] : undefined;
 
-    for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
-      const batch = recipients.slice(i, i + BATCH_SIZE);
-      const results = await Promise.allSettled(
-        batch.map((to) =>
-          resend.emails.send({
-            from: fromAddress,
-            to,
-            bcc,
-            subject: validated.subject,
-            html,
-            text,
-          })
-        )
-      );
-      for (const r of results) {
-        if (r.status === 'fulfilled' && !r.value.error) {
-          successCount += 1;
-        } else {
-          failureCount += 1;
-          if (r.status === 'fulfilled' && r.value.error) {
-            console.error('broadcast send error:', r.value.error);
-          } else if (r.status === 'rejected') {
-            console.error('broadcast send rejected:', r.reason);
-          }
-        }
-      }
-    }
+    const { successCount, failedRecipients } = await deliverBroadcastEmails({
+      sendBatch: createBatchSender(resend),
+      recipients,
+      email: {
+        from: fromAddress,
+        bcc,
+        subject: validated.subject,
+        html,
+        text,
+      },
+      idempotencyPrefix: `broadcast-${broadcastId}`,
+    });
 
     const inserted = await db
       .insert(broadcasts)
@@ -435,10 +437,12 @@ export async function sendBroadcastEmail(
         message: extractBroadcastPlainText(content),
         recipientCount: recipients.length,
         sentSuccessCount: successCount,
-        sentFailureCount: failureCount,
+        sentFailureCount: failedRecipients.length,
         sentBy: session.username || 'unknown',
         senderName: validated.senderName,
         signatureText: validated.signatureText,
+        bccEmail: validated.bccEmail ?? null,
+        failedRecipients,
         content,
       })
       .returning({ id: broadcasts.id });
@@ -465,11 +469,136 @@ export async function sendBroadcastEmail(
         broadcastId: inserted[0].id,
         recipientCount: recipients.length,
         successCount,
-        failureCount,
+        failureCount: failedRecipients.length,
       },
     };
   } catch (error) {
     console.error('sendBroadcastEmail error:', error);
+    if (error instanceof ZodError) {
+      return {
+        success: false,
+        error: 'VALIDATION_ERROR',
+        details: error.flatten(),
+      };
+    }
+    return { success: false, error: 'INTERNAL_ERROR' };
+  }
+}
+
+/**
+ * Retries the recipients that never received a previously sent broadcast.
+ * The stored content, signature and original date are reused so the retry is
+ * byte-for-byte the same letter the other recipients got.
+ */
+export async function resendFailedBroadcastEmails(
+  input: unknown
+): Promise<ActionResult<BroadcastResendResult>> {
+  try {
+    const session = await getSession();
+    if (!session.isAdmin) {
+      return { success: false, error: 'UNAUTHORIZED' };
+    }
+
+    const { broadcastId } = resendBroadcastFailuresSchema.parse(input);
+
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.error(
+        'resendFailedBroadcastEmails: RESEND_API_KEY is not configured'
+      );
+      return {
+        success: false,
+        error: 'INTERNAL_ERROR',
+        details: { message: 'Serviço de email não configurado.' },
+      };
+    }
+
+    const rows = await db
+      .select()
+      .from(broadcasts)
+      .where(eq(broadcasts.id, broadcastId))
+      .limit(1);
+    const broadcast = rows[0];
+    if (!broadcast) {
+      return { success: false, error: 'NOT_FOUND' };
+    }
+
+    const pending = Array.from(
+      new Set(
+        (broadcast.failedRecipients ?? [])
+          .map((email) => email.trim().toLowerCase())
+          .filter((email) => email.includes('@'))
+      )
+    );
+    if (pending.length === 0) {
+      return { success: false, error: 'NO_FAILED_RECIPIENTS' };
+    }
+    if (!broadcast.content) {
+      return {
+        success: false,
+        error: 'MISSING_CONTENT',
+        details: {
+          message:
+            'Este comunicado foi enviado antes do novo editor e não pode ser reenviado.',
+        },
+      };
+    }
+
+    const resend = new Resend(apiKey);
+    const fromAddress =
+      process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+    const senderName = broadcast.senderName ?? '';
+    const html = renderBroadcastEmailHtml({
+      subject: broadcast.subject,
+      content: broadcast.content,
+      senderName,
+      signatureText: broadcast.signatureText ?? undefined,
+      date: broadcast.createdAt,
+    });
+    const text = renderBroadcastEmailText(
+      broadcast.content,
+      senderName,
+      broadcast.createdAt,
+      broadcast.signatureText ?? undefined
+    );
+
+    const { successCount, failedRecipients } = await deliverBroadcastEmails({
+      sendBatch: createBatchSender(resend),
+      recipients: pending,
+      email: {
+        from: fromAddress,
+        bcc: broadcast.bccEmail ? [broadcast.bccEmail] : undefined,
+        subject: broadcast.subject,
+        html,
+        text,
+      },
+      // A fresh prefix per attempt: retrying is meant to send again, and reusing
+      // the original key would make Resend replay the previous response.
+      idempotencyPrefix: `broadcast-${broadcastId}-retry-${randomUUID()}`,
+    });
+
+    await db
+      .update(broadcasts)
+      .set({
+        sentSuccessCount: broadcast.sentSuccessCount + successCount,
+        sentFailureCount: failedRecipients.length,
+        failedRecipients,
+      })
+      .where(eq(broadcasts.id, broadcastId));
+
+    revalidatePath('/admin/comunicacoes');
+
+    return {
+      success: true,
+      data: {
+        broadcastId,
+        retriedCount: pending.length,
+        successCount,
+        failureCount: failedRecipients.length,
+      },
+    };
+  } catch (error) {
+    console.error('resendFailedBroadcastEmails error:', error);
     if (error instanceof ZodError) {
       return {
         success: false,
