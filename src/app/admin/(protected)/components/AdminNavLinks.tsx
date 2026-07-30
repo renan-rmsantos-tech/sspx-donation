@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Painel' },
@@ -15,6 +16,15 @@ const navItems = [
 
 export function AdminNavLinks() {
   const pathname = usePathname();
+  const activeLinkRef = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    activeLinkRef.current?.scrollIntoView({
+      behavior: 'instant',
+      block: 'nearest',
+      inline: 'center',
+    });
+  }, [pathname]);
 
   return (
     <>
@@ -27,7 +37,9 @@ export function AdminNavLinks() {
               <span className="w-px h-5 bg-[#FAF8F540] flex-shrink-0 mx-1" />
             )}
             <Link
+              ref={isActive ? activeLinkRef : undefined}
               href={item.href}
+              aria-current={isActive ? 'page' : undefined}
               className={`py-1.5 px-3.5 rounded-md text-[14px] leading-[18px] transition-colors ${
                 isActive
                   ? 'bg-[#FAF8F526] text-[#FAF8F5]'

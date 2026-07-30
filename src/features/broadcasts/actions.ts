@@ -3,12 +3,31 @@
 import { revalidatePath } from 'next/cache';
 import { ZodError } from 'zod';
 import { Resend } from 'resend';
+import { randomUUID } from 'node:crypto';
 import { db } from '@/lib/db';
 import { broadcasts } from '@/lib/db/schema';
 import { getSession } from '@/lib/auth/session';
-import { renderEmailHtml } from '@/features/donations/emails/layout';
-import { sendBroadcastSchema, sendTestBroadcastSchema } from './schemas';
+import {
+  copyStorageObject,
+  deleteStorageObject,
+  generateSignedUploadUrl,
+} from '@/lib/storage/spaces';
+import { getPublicUrl } from '@/lib/storage/public-url';
+import {
+  deleteTemporaryBroadcastImageSchema,
+  generateBroadcastImageUploadUrlSchema,
+  sendBroadcastSchema,
+  sendTestBroadcastSchema,
+} from './schemas';
 import { getBroadcastRecipientEmails } from './queries';
+import {
+  BroadcastContentV1,
+  extractBroadcastPlainText,
+} from './content';
+import {
+  renderBroadcastEmailHtml,
+  renderBroadcastEmailText,
+} from './email';
 
 interface ActionResult<T> {
   success: boolean;
@@ -24,6 +43,132 @@ interface BroadcastResult {
   recipientCount: number;
   successCount: number;
   failureCount: number;
+}
+
+interface BroadcastImageUploadResult {
+  signedUrl: string;
+  path: string;
+  publicUrl: string;
+}
+
+function replaceBlockImagePath(
+  content: BroadcastContentV1,
+  blockId: string,
+  path: string
+): BroadcastContentV1 {
+  return {
+    ...content,
+    blocks: content.blocks.map((block) => {
+      if (block.id !== blockId || block.type === 'text') return block;
+      return { ...block, image: { ...block.image, path } };
+    }),
+  };
+}
+
+async function promoteBroadcastImages(
+  content: BroadcastContentV1,
+  broadcastId: string
+): Promise<{ content: BroadcastContentV1; temporaryPaths: string[] }> {
+  let promoted = content;
+  const promotedPaths = new Map<string, string>();
+
+  for (const block of content.blocks) {
+    if (block.type === 'text' || !block.image.path.startsWith('temporary/')) {
+      continue;
+    }
+
+    const existingDestination = promotedPaths.get(block.image.path);
+    if (existingDestination) {
+      promoted = replaceBlockImagePath(
+        promoted,
+        block.id,
+        existingDestination
+      );
+      continue;
+    }
+
+    const filename = block.image.path.split('/').slice(-1)[0];
+    if (!filename) throw new Error('Invalid temporary broadcast image path');
+
+    const destinationPath = `broadcasts/${broadcastId}/${filename}`;
+    await copyStorageObject(
+      'broadcast-images',
+      block.image.path,
+      destinationPath,
+      { contentType: 'image/jpeg', publicRead: true }
+    );
+    promotedPaths.set(block.image.path, destinationPath);
+    promoted = replaceBlockImagePath(promoted, block.id, destinationPath);
+  }
+
+  return {
+    content: promoted,
+    temporaryPaths: Array.from(promotedPaths.keys()),
+  };
+}
+
+export async function generateBroadcastImageUploadUrl(
+  input: unknown
+): Promise<ActionResult<BroadcastImageUploadResult>> {
+  try {
+    const session = await getSession();
+    if (!session.isAdmin) return { success: false, error: 'UNAUTHORIZED' };
+
+    const { composerId } =
+      generateBroadcastImageUploadUrlSchema.parse(input);
+    const path = `temporary/${composerId}/${randomUUID()}.jpg`;
+    const { signedUrl } = await generateSignedUploadUrl(
+      'broadcast-images',
+      path,
+      { contentType: 'image/jpeg', publicRead: true }
+    );
+
+    return {
+      success: true,
+      data: {
+        signedUrl,
+        path,
+        publicUrl: getPublicUrl('broadcast-images', path),
+      },
+    };
+  } catch (error) {
+    console.error('generateBroadcastImageUploadUrl error:', error);
+    if (error instanceof ZodError) {
+      return {
+        success: false,
+        error: 'VALIDATION_ERROR',
+        details: error.flatten(),
+      };
+    }
+    return {
+      success: false,
+      error: 'STORAGE_ERROR',
+      details: { message: 'Não foi possível preparar o upload da imagem.' },
+    };
+  }
+}
+
+export async function deleteTemporaryBroadcastImage(
+  input: unknown
+): Promise<ActionResult<null>> {
+  try {
+    const session = await getSession();
+    if (!session.isAdmin) return { success: false, error: 'UNAUTHORIZED' };
+
+    const { path } = deleteTemporaryBroadcastImageSchema.parse(input);
+    await deleteStorageObject('broadcast-images', path);
+    return { success: true, data: null };
+  } catch (error) {
+    console.error('deleteTemporaryBroadcastImage error:', error);
+    if (error instanceof ZodError) {
+      return {
+        success: false,
+        error: 'VALIDATION_ERROR',
+        details: error.flatten(),
+      };
+    }
+    return { success: false, error: 'STORAGE_ERROR' };
+  }
 }
 
 export async function sendBroadcastEmail(
@@ -55,11 +200,18 @@ export async function sendBroadcastEmail(
     const resend = new Resend(apiKey);
     const fromAddress =
       process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-    const html = renderEmailHtml({
+    const broadcastId = randomUUID();
+    const promoted = await promoteBroadcastImages(
+      validated.content,
+      broadcastId
+    );
+    const content = promoted.content;
+    const html = renderBroadcastEmailHtml({
       subject: validated.subject,
-      bodyText: validated.message,
+      content,
       senderName: validated.senderName,
     });
+    const text = renderBroadcastEmailText(content, validated.senderName);
 
     let successCount = 0;
     let failureCount = 0;
@@ -76,6 +228,7 @@ export async function sendBroadcastEmail(
             bcc,
             subject: validated.subject,
             html,
+            text,
           })
         )
       );
@@ -96,15 +249,23 @@ export async function sendBroadcastEmail(
     const inserted = await db
       .insert(broadcasts)
       .values({
+        id: broadcastId,
         subject: validated.subject,
-        message: validated.message,
+        message: extractBroadcastPlainText(content),
         recipientCount: recipients.length,
         sentSuccessCount: successCount,
         sentFailureCount: failureCount,
         sentBy: session.username || 'unknown',
         senderName: validated.senderName,
+        content,
       })
       .returning({ id: broadcasts.id });
+
+    await Promise.all(
+      promoted.temporaryPaths.map((path) =>
+        deleteStorageObject('broadcast-images', path)
+      )
+    );
 
     revalidatePath('/admin/comunicacoes');
 
@@ -154,22 +315,31 @@ export async function sendTestBroadcastEmail(
     const resend = new Resend(apiKey);
     const fromAddress =
       process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-    const html = renderEmailHtml({
+    const html = renderBroadcastEmailHtml({
       subject: validated.subject,
-      bodyText: validated.message,
+      content: validated.content,
       senderName: validated.senderName,
     });
+    const text = renderBroadcastEmailText(
+      validated.content,
+      validated.senderName
+    );
 
     const result = await resend.emails.send({
       from: fromAddress,
       to: validated.testEmail,
       subject: `[TESTE] ${validated.subject}`,
       html,
+      text,
     });
 
     if (result.error) {
       console.error('sendTestBroadcastEmail send error:', result.error);
-      return { success: false, error: 'INTERNAL_ERROR' };
+      return {
+        success: false,
+        error: 'INTERNAL_ERROR',
+        details: { message: result.error.message },
+      };
     }
 
     return { success: true, data: { to: validated.testEmail } };

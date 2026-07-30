@@ -136,6 +136,7 @@ Source of truth: `src/lib/db/schema.ts` (migrations in `src/lib/db/migrations/`)
    - subject, message
    - recipientCount, sentSuccessCount, sentFailureCount
    - sentBy, senderName
+   - content (nullable JSONB; versioned structured email blocks)
    - createdAt (indexed)
 
 7. **fund_transfers** - Transfers of funds between products
@@ -168,7 +169,8 @@ Source of truth: `src/lib/db/schema.ts` (migrations in `src/lib/db/migrations/`)
   - `receipts` (private) - PIX payment proofs
   - `pix-qr` (public) - QR code image
   - `product-photos` (public) - product images
-- Public URLs come from `NEXT_PUBLIC_SPACES_PIX_QR_URL` / `NEXT_PUBLIC_SPACES_PRODUCT_PHOTOS_URL` (also allow-listed in `next.config.ts` `remotePatterns`)
+  - `broadcast-images` (public) - temporary and sent broadcast images
+- Public URLs come from the corresponding `NEXT_PUBLIC_SPACES_*_URL` variables. Buckets rendered through `next/image` are also allow-listed in `next.config.ts` `remotePatterns`.
 
 ### Validation
 
@@ -328,7 +330,7 @@ Production runs entirely on DigitalOcean — full details in `docs/deploy.md`:
 
 - **Droplet** with Docker Compose (`compose.traefik.yaml`) behind **Traefik** (TLS via Let's Encrypt), domain `ajude-o-colegio-sao-jose.com`
 - **PostgreSQL** as a container on the Droplet's `internal` Docker network (`postgres:5432/donation`)
-- **DigitalOcean Spaces** for file storage (three buckets)
+- **DigitalOcean Spaces** for file storage (four buckets)
 - **CI/CD**: GitHub Actions (`.github/workflows/deploy.yml`) — lint and tests are deploy gates; deploy happens over SSH running `scripts/deploy.sh`
 - Production `.env` lives on the Droplet (mounted as a build secret and injected at runtime; never committed)
 

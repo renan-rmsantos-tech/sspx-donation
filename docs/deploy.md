@@ -28,7 +28,7 @@ Resend ◀── emails (agradecimento e comunicados)
 | App Next.js | Container `donation` na Droplet (`compose.traefik.yaml`) | Build multi-etapa simples (`Dockerfile`), `npm start` na porta 3000 |
 | Proxy / TLS | Traefik na Droplet (stack separada, rede externa `proxy`) | Certresolver `letsencrypt`; labels no compose roteiam o host |
 | Banco | Container Postgres na rede externa `internal` | Acessado como `postgres:5432/donation`; não é exposto publicamente |
-| Storage | DigitalOcean Spaces (S3-compatível) | Buckets: `receipts` (privado), `pix-qr` e `product-photos` (públicos) |
+| Storage | DigitalOcean Spaces (S3-compatível) | Buckets: `receipts` (privado), `pix-qr`, `product-photos` e `broadcast-images` (públicos) |
 | Emails | Resend | `RESEND_API_KEY` / `RESEND_FROM_EMAIL` |
 | CI/CD | GitHub Actions (`.github/workflows/deploy.yml`) | Deploy por SSH executando `scripts/deploy.sh` |
 
@@ -71,16 +71,17 @@ ssh-copy-id -i deploy_key.pub USER@DROPLET_HOST   # ou anexe em ~/.ssh/authorize
 - Repositório clonado em `$DEPLOY_PATH` com o remote `origin` apontando para este repo.
 - Arquivo `.env` de produção na raiz do clone (não é versionado) com **todas** as variáveis do [`.env.example`](../.env.example) preenchidas — em especial:
   - `DATABASE_URL=postgresql://<user>:<senha>@postgres:5432/donation`
-  - `DO_SPACES_*` (endpoint, região, credenciais e os três buckets)
+  - `DO_SPACES_*` (endpoint, região, credenciais e os quatro buckets)
   - `NEXT_PUBLIC_SPACES_PIX_QR_URL` / `NEXT_PUBLIC_SPACES_PRODUCT_PHOTOS_URL` e `NEXT_PUBLIC_SITE_URL` (viram build args — mudanças neles exigem rebuild)
   - `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_PASSWORD` (32+ caracteres)
   - `RESEND_API_KEY`, `RESEND_FROM_EMAIL`
 
 ## DigitalOcean Spaces
 
-- Buckets usados: `receipts` (**privado** — comprovantes), `pix-qr` e `product-photos` (**públicos** — ACL `public-read` aplicada no upload).
+- Buckets usados: `receipts` (**privado** — comprovantes), `pix-qr`, `product-photos` e `broadcast-images` (**públicos** — ACL `public-read` aplicada no upload).
 - Downloads de comprovantes usam URLs assinadas (5 min); uploads podem usar URL assinada gerada no servidor e enviada ao browser — o Spaces precisa de **CORS liberado** (método `PUT`) para a origem `https://ajude-o-colegio-sao-jose.com` (e `http://localhost:3000` em dev).
-- As URLs públicas dos buckets ficam em `NEXT_PUBLIC_SPACES_*_URL` e também nos `remotePatterns` de `next.config.ts` — ao trocar de bucket/região, atualize os dois.
+- Configure no bucket `broadcast-images` uma regra de ciclo de vida para remover objetos em `temporary/` após 7 dias. Imagens efetivamente enviadas são promovidas para `broadcasts/<id>/`.
+- As URLs públicas ficam em `NEXT_PUBLIC_SPACES_*_URL`. Os buckets consumidos pelo componente `next/image` também precisam estar nos `remotePatterns` de `next.config.ts`.
 
 ## Migrações em produção
 

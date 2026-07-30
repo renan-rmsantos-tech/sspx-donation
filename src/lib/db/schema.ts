@@ -8,8 +8,10 @@ import {
   pgEnum,
   primaryKey,
   index,
+  jsonb,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import type { BroadcastContentV1 } from '@/features/broadcasts/content';
 
 export const donationTypeEnum = pgEnum('donation_type', ['monetary', 'physical']);
 export const donationModeEnum = pgEnum('donation_mode', ['monetary', 'physical', 'both']);
@@ -86,6 +88,7 @@ export const broadcasts = pgTable(
     sentFailureCount: integer('sent_failure_count').notNull().default(0),
     sentBy: text('sent_by').notNull(),
     senderName: text('sender_name'),
+    content: jsonb('content').$type<BroadcastContentV1>(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (t) => ({

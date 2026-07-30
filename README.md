@@ -52,11 +52,11 @@ Principais variáveis (lista completa e comentada no [`.env.example`](.env.examp
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Credenciais do admin | `admin` / `admin123` |
 | `SESSION_PASSWORD` | Chave da sessão (**32+ caracteres**) | Altere em produção |
 | `DO_SPACES_*` | Endpoint, região, credenciais e buckets do Spaces | — |
-| `NEXT_PUBLIC_SPACES_PIX_QR_URL` / `NEXT_PUBLIC_SPACES_PRODUCT_PHOTOS_URL` | URLs públicas dos buckets | — |
+| `NEXT_PUBLIC_SPACES_*_URL` | URLs públicas dos buckets de imagens | — |
 | `NEXT_PUBLIC_SITE_URL` | URL pública do site (usada nos emails) | `http://localhost:3000` |
 | `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Envio de emails | Opcional em dev |
 
-> Sem as credenciais do Spaces o app roda normalmente, mas os fluxos de upload (QR Code do PIX, foto de produto, comprovante) falham ao serem usados.
+> Sem as credenciais do Spaces o app roda normalmente, mas os fluxos de upload (QR Code do PIX, fotos de produtos/comunicados e comprovantes) falham ao serem usados.
 
 ### 3. Subir o PostgreSQL local
 
@@ -195,12 +195,12 @@ Dockerfile               # Imagem de produção
 - Confira `ADMIN_USERNAME` e `ADMIN_PASSWORD` nas variáveis de ambiente
 - Limpe cookies do navegador e tente novamente
 
-### Upload de arquivos falha (PIX, fotos de produto, comprovantes)
+### Upload de arquivos falha (PIX, fotos de produto/comunicado, comprovantes)
 
-- Confirme as variáveis `DO_SPACES_*` (endpoint, região, credenciais e os três buckets)
-- Os buckets precisam existir no Spaces: `receipts` (privado), `pix-qr` e `product-photos` (públicos)
+- Confirme as variáveis `DO_SPACES_*` (endpoint, região, credenciais e os quatro buckets)
+- Os buckets precisam existir no Spaces: `receipts` (privado), `pix-qr`, `product-photos` e `broadcast-images` (públicos)
 - Uploads assinados são feitos direto do browser: o Spaces precisa de **CORS liberado** para a origem do site
-- Imagens não aparecem? Confira `NEXT_PUBLIC_SPACES_*_URL` e os `remotePatterns` em `next.config.ts`
+- Imagens não aparecem? Confira `NEXT_PUBLIC_SPACES_*_URL`; para buckets consumidos por `next/image`, confira também os `remotePatterns` em `next.config.ts`
 
 ---
 

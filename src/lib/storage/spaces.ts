@@ -1,4 +1,5 @@
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
@@ -36,6 +37,7 @@ function getBucketName(bucket: string): string {
     receipts: process.env.DO_SPACES_BUCKET_RECEIPTS,
     'pix-qr': process.env.DO_SPACES_BUCKET_PIX_QR,
     'product-photos': process.env.DO_SPACES_BUCKET_PRODUCT_PHOTOS,
+    'broadcast-images': process.env.DO_SPACES_BUCKET_BROADCAST_IMAGES,
   };
 
   const name = names[bucket];
@@ -79,13 +81,16 @@ export const uploadFileDirect = async (
 
 export const generateSignedUploadUrl = async (
   bucket: string,
-  path: string
+  path: string,
+  options?: { contentType?: string; publicRead?: boolean }
 ): Promise<{ signedUrl: string; path: string }> => {
   const signedUrl = await getSignedUrl(
     getClient(),
     new PutObjectCommand({
       Bucket: getBucketName(bucket),
       Key: path,
+      ContentType: options?.contentType,
+      ACL: options?.publicRead ? 'public-read' : undefined,
     }),
     { expiresIn: 300 }
   );
@@ -124,4 +129,30 @@ export const deleteStorageObject = async (
       error
     );
   }
+};
+
+export const copyStorageObject = async (
+  bucket: string,
+  sourcePath: string,
+  destinationPath: string,
+  options?: { contentType?: string; publicRead?: boolean }
+): Promise<{ path: string }> => {
+  const bucketName = getBucketName(bucket);
+  const encodedSource = sourcePath
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+
+  await getClient().send(
+    new CopyObjectCommand({
+      Bucket: bucketName,
+      CopySource: `${bucketName}/${encodedSource}`,
+      Key: destinationPath,
+      ContentType: options?.contentType,
+      MetadataDirective: options?.contentType ? 'REPLACE' : 'COPY',
+      ACL: options?.publicRead ? 'public-read' : undefined,
+    })
+  );
+
+  return { path: destinationPath };
 };
