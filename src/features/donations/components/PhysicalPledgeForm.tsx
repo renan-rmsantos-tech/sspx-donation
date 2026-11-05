@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createPhysicalPledge } from '../actions';
+import { useServerAction } from '@/components/server-actions';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
@@ -19,6 +19,7 @@ export function PhysicalPledgeForm({
   const [donorPhone, setDonorPhone] = useState('');
   const [donorEmail, setDonorEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const createPhysicalPledge = useServerAction('createPhysicalPledge');
   const donorNameInputId = `${idPrefix}donorName`;
   const donorPhoneInputId = `${idPrefix}donorPhone`;
   const donorEmailInputId = `${idPrefix}donorEmail`;

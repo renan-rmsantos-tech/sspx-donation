@@ -1,11 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render as baseRender, screen } from '@testing-library/react';
+import type { ReactElement, ReactNode } from 'react';
 import { MonetaryDonationForm } from '../MonetaryDonationForm';
+import { ServerActionsProvider } from '@/components/server-actions';
 
-vi.mock('../../actions', () => ({
-  createMonetaryDonation: vi.fn(),
-  uploadFile: vi.fn(),
-}));
+const createMonetaryDonation = vi.fn();
+const uploadFile = vi.fn();
+
+const render = (ui: ReactElement) =>
+  baseRender(ui, {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <ServerActionsProvider actions={{ createMonetaryDonation, uploadFile }}>
+        {children}
+      </ServerActionsProvider>
+    ),
+  });
 
 describe('MonetaryDonationForm', () => {
   beforeEach(() => {

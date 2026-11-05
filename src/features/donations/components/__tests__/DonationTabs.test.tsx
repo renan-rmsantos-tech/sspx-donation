@@ -2,12 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DonationTabs } from '../DonationTabs';
 
-vi.mock('../../actions', () => ({
-  createMonetaryDonation: vi.fn(),
-  createPhysicalPledge: vi.fn(),
-  uploadFile: vi.fn(),
-}));
-
 describe('DonationTabs', () => {
   beforeEach(() => {
     vi.clearAllMocks();
