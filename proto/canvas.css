@@ -1,0 +1,8 @@
+/*
+ * O app carrega a Playfair Display pelo `next/font`, que não roda no Vite. Na
+ * galeria a variável cai na Playfair instalada no sistema, se houver, e depois
+ * na serifada do sistema (a mesma pilha de `fontFamily.serif` do Tailwind).
+ */
+:root {
+  --font-playfair: 'Playfair Display', Georgia, serif;
+}

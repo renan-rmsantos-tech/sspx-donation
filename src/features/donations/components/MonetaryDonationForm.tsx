@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { createMonetaryDonation, uploadFile } from '../actions';
+import { useServerAction } from '@/components/server-actions';
 import { formatCurrency } from '@/lib/utils/format';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,6 +32,8 @@ export function MonetaryDonationForm({
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const createMonetaryDonation = useServerAction('createMonetaryDonation');
+  const uploadFile = useServerAction('uploadFile');
 
   const remaining = Math.max(0, targetAmount - currentAmount);
   const hasPixSettings = qrCodeImageUrl || copiaEColaCode;

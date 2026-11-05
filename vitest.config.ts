@@ -35,6 +35,8 @@ export default defineConfig({
       exclude: [
         '**/*.test.*',
         '**/__tests__/**',
+        '**/*.proto.tsx',
+        '**/*.fixtures.ts',
       ],
     },
   },

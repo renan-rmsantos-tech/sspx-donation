@@ -1,12 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render as baseRender, screen, fireEvent, waitFor } from '@testing-library/react';
+import type { ReactElement, ReactNode } from 'react';
 import { PhysicalPledgeForm } from '../PhysicalPledgeForm';
-import { createPhysicalPledge } from '../../actions';
+import { ServerActionsProvider } from '@/components/server-actions';
 import { toast } from 'sonner';
 
-vi.mock('../../actions', () => ({
-  createPhysicalPledge: vi.fn(),
-}));
+const createPhysicalPledge = vi.fn();
+
+const render = (ui: ReactElement) =>
+  baseRender(ui, {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <ServerActionsProvider actions={{ createPhysicalPledge }}>
+        {children}
+      </ServerActionsProvider>
+    ),
+  });
 
 describe('PhysicalPledgeForm', () => {
   beforeEach(() => {
@@ -27,7 +35,7 @@ describe('PhysicalPledgeForm', () => {
   });
 
   it('should show success toast after successful submission', async () => {
-    vi.mocked(createPhysicalPledge).mockResolvedValueOnce({
+    createPhysicalPledge.mockResolvedValueOnce({
       success: true,
       data: { donationId: 'donation-123' },
     });
@@ -55,7 +63,7 @@ describe('PhysicalPledgeForm', () => {
   });
 
   it('should show error toast on failed submission', async () => {
-    vi.mocked(createPhysicalPledge).mockResolvedValueOnce({
+    createPhysicalPledge.mockResolvedValueOnce({
       success: false,
       error: 'ALREADY_FULFILLED',
     });

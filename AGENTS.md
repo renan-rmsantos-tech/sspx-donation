@@ -70,6 +70,8 @@ Skills são pacotes de instruções para assistentes (Cursor, Claude Code, etc.)
 | `nano-banana-pro` | Geração/edição de imagens (Gemini / Nano Banana Pro). |
 | `next-best-practices` | Next.js: App Router, RSC, dados, metadata, bundling. |
 | `perplexity` | Pesquisa na web com Perplexity (não substitui docs de libs nem o repo). |
+| `proto` | Galeria `@compozy/proto`: protótipos, drafts, flows, guards e CLI `proto`. |
+| `proto-apply-comments` | Aplicar comentários de revisão da galeria de protótipos. |
 | `postgres-drizzle` | PostgreSQL + Drizzle: SQL, índices, pooling, RLS, N+1. |
 | `professional-communication` | E-mails, mensagens de time, reuniões, audiências técnicas/não técnicas. |
 | `react` | React: componentes, hooks, estado, Vitest; React 19+. |
@@ -85,6 +87,16 @@ Skills são pacotes de instruções para assistentes (Cursor, Claude Code, etc.)
 | `web-design-guidelines` | Revisão de UI contra diretrizes web (a11y, UX). |
 
 Para o texto completo de cada skill (passos, regras, referências), abra o `SKILL.md` correspondente.
+
+## Protótipos (`@compozy/proto`)
+
+A galeria de protótipos renderiza as views reais com fixtures: `npm run proto dev`
+(http://127.0.0.1:4480) e `npm run proto check` antes da revisão. Protótipos ficam ao
+lado da view (`product-detail.proto.tsx` + `product-detail.fixtures.ts`), drafts em
+`src/drafts/<slug>/index.proto.tsx`. Views de cliente pedem server actions com
+`useServerAction` (`src/components/server-actions.tsx`) em vez de importar
+`actions.ts`. Regras completas em `docs/design/prototyping.md`; skills `proto` e
+`proto-apply-comments` (instale com `npx proto init --skills`).
 
 ## Database Schema
 

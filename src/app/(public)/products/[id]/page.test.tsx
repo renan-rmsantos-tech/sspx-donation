@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { notFound } from 'next/navigation';
 import ProductDetailPage from './page';
 import { getPublishedProductById } from '@/features/products/queries';
 import { getPixSettings } from '@/features/pix/queries';
+import { createPhysicalPledge } from '@/features/donations/actions';
 
 vi.mock('next/navigation', () => ({
   notFound: vi.fn(),
@@ -15,6 +16,12 @@ vi.mock('@/features/products/queries', () => ({
 
 vi.mock('@/features/pix/queries', () => ({
   getPixSettings: vi.fn(),
+}));
+
+vi.mock('@/features/donations/actions', () => ({
+  createMonetaryDonation: vi.fn(),
+  createPhysicalPledge: vi.fn(),
+  uploadFile: vi.fn(),
 }));
 
 vi.mock('@/lib/storage/public-url', () => ({
@@ -339,6 +346,41 @@ describe('ProductDetailPage', () => {
       });
       render(Page);
       expect(screen.getByText('Test Monetary Product')).toBeInTheDocument();
+    });
+  });
+
+  describe('Donation actions', () => {
+    it('should submit the pledge form through the real server action', async () => {
+      const unfulfilled = { ...mockPhysicalProduct, isFulfilled: false };
+      vi.mocked(getPublishedProductById).mockResolvedValue(unfulfilled);
+      vi.mocked(createPhysicalPledge).mockResolvedValue({
+        success: true,
+        data: { donationId: 'donation-1', notificationSent: true },
+      });
+      const Page = await ProductDetailPage({
+        params: Promise.resolve({ id: '2' }),
+      });
+      const { container } = render(Page);
+
+      fireEvent.change(container.querySelector('#physical-donorName')!, {
+        target: { value: 'Maria' },
+      });
+      fireEvent.change(container.querySelector('#physical-donorPhone')!, {
+        target: { value: '11987654321' },
+      });
+      fireEvent.change(container.querySelector('#physical-donorEmail')!, {
+        target: { value: 'maria@example.com' },
+      });
+      fireEvent.click(screen.getByText('Registrar Compromisso'));
+
+      await waitFor(() => {
+        expect(createPhysicalPledge).toHaveBeenCalledWith({
+          productId: '2',
+          donorName: 'Maria',
+          donorPhone: '11987654321',
+          donorEmail: 'maria@example.com',
+        });
+      });
     });
   });
 
