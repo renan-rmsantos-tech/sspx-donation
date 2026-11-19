@@ -3,14 +3,12 @@ import { render, screen } from '@testing-library/react';
 import CatalogPage from './page';
 import {
   getPublishedRegularProducts,
-  getPublishedScholarshipProducts,
   getRegularProductsByCategory,
 } from '@/features/products/queries';
 import { getCategories } from '@/features/categories/queries';
 
 vi.mock('@/features/products/queries', () => ({
   getPublishedRegularProducts: vi.fn(),
-  getPublishedScholarshipProducts: vi.fn(),
   getRegularProductsByCategory: vi.fn(),
 }));
 
@@ -85,11 +83,20 @@ describe('CatalogPage', () => {
       mockProduct,
       mockPhysicalProduct,
     ]);
-    vi.mocked(getPublishedScholarshipProducts).mockResolvedValue([]);
     vi.mocked(getRegularProductsByCategory).mockResolvedValue([mockProduct]);
   });
 
   describe('Rendering', () => {
+    it('should not render the scholarships section', async () => {
+      const Page = await CatalogPage({
+        searchParams: Promise.resolve({}),
+      });
+      render(Page);
+
+      expect(screen.queryByText('Bolsas de Estudo')).not.toBeInTheDocument();
+      expect(document.getElementById('bolsas')).toBeNull();
+    });
+
     it('should render catalog page heading', async () => {
       const Page = await CatalogPage({
         searchParams: Promise.resolve({}),
