@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Cartaz A4 — Doações Colégio São José</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+<style>
+  /* Paleta do site (src/app/globals.css + catálogo público) */
+  :root {
+    --bg: #E5E0D6;        /* hsl(40 16% 88%) */
+    --navy: #1E3D59;
+    --gold: #B8952E;
+    --gold-soft: #C5A572;
+    --line: #D4C4A8;
+    --text: #3D4F5F;
+    --muted: #6B7D8E;
+    --sand: #8A7A5C;
+    --quote-bg: #E8EEF4;
+    --cream-1: #FBF6EC;
+    --cream-2: #F5EDDB;
+  }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #9a9a9a; }
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--text);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .serif { font-family: "Playfair Display", Georgia, serif; }
+
+  .page {
+    width: 210mm;
+    height: 297mm;
+    margin: 0 auto;
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  @media screen { .page { margin: 10mm auto; box-shadow: 0 6px 30px rgba(0,0,0,.25); } }
+
+  /* Marca d'água FSSPX, como na seção "Mensagem" do site */
+  .watermark {
+    position: absolute;
+    top: 150mm; left: 50%;
+    width: 150mm; height: 150mm;
+    transform: translateX(-50%);
+    opacity: .05;
+    pointer-events: none;
+  }
+  .watermark img { width: 100%; height: 100%; object-fit: contain; }
+
+  /* Cabeçalho (PublicNav) */
+  header {
+    display: flex; align-items: center; gap: 6mm;
+    padding: 7mm 16mm 5mm;
+    border-bottom: 0.7mm solid var(--gold);
+    position: relative;
+  }
+  header img { width: 25mm; height: 25mm; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+  header .brand { display: flex; flex-direction: column; gap: 1.5mm; }
+  header .name { font-weight: 700; font-size: 31pt; line-height: 1.05; color: var(--navy); }
+  header .tag { font-size: 9pt; letter-spacing: .22em; text-transform: uppercase; color: var(--sand); }
+
+  main { flex: 1; padding: 6mm 16mm 0; position: relative; display: flex; flex-direction: column; }
+
+  .eyebrow { font-size: 9pt; letter-spacing: .2em; text-transform: uppercase; color: var(--sand); margin-bottom: 3mm; }
+  h1 { font-weight: 700; font-size: 24pt; line-height: 1.12; color: var(--gold); }
+  h1 em { font-style: italic; font-weight: 400; color: var(--navy); }
+  .lead { margin-top: 2.5mm; font-size: 10.5pt; line-height: 1.55; max-width: 168mm; }
+
+  /* Bloco QR (estilo do card "Bolsas de Estudo") */
+  .qr-card {
+    margin-top: 5mm;
+    display: flex; align-items: center; gap: 8mm;
+    border: 0.35mm solid var(--gold-soft);
+    border-radius: 5mm;
+    background: linear-gradient(135deg, var(--cream-1), var(--cream-2));
+    padding: 5mm 7mm;
+  }
+  .qr {
+    flex-shrink: 0;
+    width: 48mm; height: 48mm;
+    background: #fff;
+    padding: 4mm;
+    border-radius: 3mm;
+    border: 0.35mm solid var(--line);
+  }
+  .qr img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+  .qr-text .pill {
+    display: inline-block; padding: 1mm 3.5mm; border-radius: 999px;
+    background: var(--navy); color: #F8F6F1;
+    font-size: 8pt; letter-spacing: .16em; text-transform: uppercase;
+  }
+  .qr-text h2 { margin-top: 2.5mm; font-weight: 700; font-size: 19pt; line-height: 1.15; color: var(--navy); }
+  .qr-text p { margin-top: 3mm; font-size: 11pt; line-height: 1.55; }
+  .qr-text .url {
+    margin-top: 3mm; font-size: 11.5pt; font-weight: 600; color: var(--navy);
+    padding-top: 3mm; border-top: 0.3mm solid var(--line); word-break: break-all;
+  }
+
+  /* Como funciona */
+  .how { margin-top: 5mm; }
+  .how h3 { font-weight: 700; font-size: 18pt; color: var(--gold); margin-bottom: 3mm; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; }
+  .step {
+    background: rgba(255,255,255,.55);
+    border: 0.3mm solid var(--line);
+    border-radius: 3.5mm;
+    padding: 3.5mm 4mm;
+  }
+  .step .n {
+    width: 9mm; height: 9mm; border-radius: 50%;
+    background: var(--navy); color: #F8F6F1;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Playfair Display", Georgia, serif; font-weight: 700; font-size: 13pt;
+  }
+  .step h4 { margin-top: 2.5mm; font-family: "Playfair Display", Georgia, serif; font-weight: 700; font-size: 13pt; color: var(--navy); line-height: 1.2; }
+  .step p { margin-top: 1.5mm; font-size: 9.5pt; line-height: 1.45; }
+
+  /* Citação (mesmo bloco do site) */
+  blockquote {
+    margin-top: 5mm;
+    background: var(--quote-bg);
+    border-left: 1mm solid var(--gold);
+    border-radius: 0 2.5mm 2.5mm 0;
+    padding: 3.5mm 6mm;
+  }
+  blockquote p { font-family: "Playfair Display", Georgia, serif; font-style: italic; font-size: 11pt; line-height: 1.5; color: var(--navy); }
+  blockquote cite { display: block; margin-top: 1.5mm; font-style: normal; font-size: 9pt; color: var(--muted); }
+
+  .thanks { margin-top: auto; padding: 3.5mm 0 4mm; text-align: center; font-size: 10.5pt; line-height: 1.5; }
+  .thanks strong { font-family: "Playfair Display", Georgia, serif; font-weight: 600; color: var(--navy); }
+
+  /* Rodapé (PublicFooter) */
+  footer {
+    background: var(--navy);
+    padding: 4.5mm 16mm;
+    display: flex; flex-direction: column; align-items: center; gap: 2mm;
+  }
+  footer img { width: 9mm; height: 11mm; object-fit: contain; filter: brightness(0) invert(1); opacity: .6; }
+  footer .org { font-size: 9pt; letter-spacing: .2em; text-transform: uppercase; color: #9B7B5A; }
+  footer .contact { font-size: 10pt; color: rgba(255,255,255,.7); display: flex; gap: 3mm; }
+  footer .contact .sep { color: rgba(255,255,255,.35); }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="watermark" aria-hidden="true"><img src="../../public/logo-fsspx.png" alt="" /></div>
+
+    <header>
+      <img src="../../public/logo.png" alt="Colégio São José" />
+      <div class="brand">
+        <span class="name serif">Colégio São José</span>
+        <span class="tag">Campanha de doações</span>
+      </div>
+    </header>
+
+    <main>
+      <h1 class="serif">O nosso Colégio nasceu<br /><em>e recorre à sua generosidade.</em></h1>
+      <p class="lead">
+        Como uma grande família em seus inícios, enfrentamos muitos desafios. Da sua ajuda
+        depende o futuro de nossas crianças, o crescimento de nossa Fraternidade e a esperança
+        do nosso Brasil.
+      </p>
+
+      <section class="qr-card">
+        <div class="qr"><img src="qrcode.svg" alt="QR Code para ajude-o-colegio-sao-jose.com" /></div>
+        <div class="qr-text">
+          <span class="pill">Doe agora</span>
+          <h2 class="serif">Aponte a câmera do celular para o QR Code</h2>
+          <p>Veja a lista de itens e gastos de que o Colégio precisa e escolha como quer ajudar.</p>
+          <p class="url">ajude-o-colegio-sao-jose.com</p>
+        </div>
+      </section>
+
+      <section class="how">
+        <h3 class="serif">Como funciona</h3>
+        <div class="steps">
+          <div class="step">
+            <div class="n">1</div>
+            <h4>Escolha um item</h4>
+            <p>No site estão os objetos e gastos concretos de que o Colégio precisa, organizados por categoria.</p>
+          </div>
+          <div class="step">
+            <div class="n">2</div>
+            <h4>Doe por Pix ou com o material</h4>
+            <p><b>Pix:</b> pague pelo QR Code do item, com o valor que quiser, e envie o comprovante.<br /><b>Material:</b> deixe seu contato e combinamos a entrega.</p>
+          </div>
+          <div class="step">
+            <div class="n">3</div>
+            <h4>Acompanhe o progresso</h4>
+            <p>Cada item mostra quanto já foi arrecadado e quanto falta para a meta. Tudo de forma transparente.</p>
+          </div>
+        </div>
+      </section>
+
+      <blockquote>
+        <p>“Há quem dá liberalmente e se torna mais rico; há quem retém mais do que é justo e acaba na pobreza.”</p>
+        <cite>Provérbios 11:24</cite>
+      </blockquote>
+
+      <p class="thanks">Muito obrigado. Que Deus os abençoe! <br /><strong>Pe. João Maria Ferreira da Costa, FSSPX</strong> — Diretor do Colégio</p>
+    </main>
+
+    <footer>
+      <img src="../../public/logo-fsspx.png" alt="Logo FSSPX" />
+      <span class="org">Fraternidade Sacerdotal São Pio X</span>
+      <span class="contact">
+        <span>colegiosaojose.acipec@gmail.com</span><span class="sep">|</span><span>(11) 91518-1075</span>
+      </span>
+    </footer>
+  </div>
+</body>
+</html>
