@@ -29,14 +29,6 @@ export function PublicNavLinks() {
       <a href="#doacoes" className={LINK_CLASS} onClick={(e) => handleNavClick(e, 'doacoes')}>
         Doações
       </a>
-      <a
-        href="https://storage.net-fs.com/hosting/8358853/8/"
-        target="_blank"
-        rel="noopener noreferrer"
-        className={LINK_CLASS}
-      >
-        Conheça o Colégio
-      </a>
     </>
   );
 }
