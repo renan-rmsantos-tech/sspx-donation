@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Cartaz A4 — Itens que faltam — Colégio São José</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+<style>
+  /* Paleta do site (src/app/globals.css + catálogo público) */
+  :root {
+    --bg: #E5E0D6;
+    --navy: #1E3D59;
+    --gold: #B8952E;
+    --gold-soft: #C5A572;
+    --line: #D4C4A8;
+    --text: #3D4F5F;
+    --muted: #6B7D8E;
+    --sand: #8A7A5C;
+    --quote-bg: #E8EEF4;
+    --cream-1: #FBF6EC;
+    --cream-2: #F5EDDB;
+  }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #9a9a9a; }
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--text);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .serif { font-family: "Playfair Display", Georgia, serif; }
+  .serif, .item h2, .price strong, .total strong { font-variant-numeric: lining-nums; }
+
+  .page {
+    width: 210mm; height: 297mm; margin: 0 auto;
+    background: var(--bg); position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  @media screen { .page { margin: 10mm auto; box-shadow: 0 6px 30px rgba(0,0,0,.25); } }
+
+  .watermark {
+    position: absolute; top: 95mm; left: 50%;
+    width: 160mm; height: 160mm; transform: translateX(-50%);
+    opacity: .05; pointer-events: none;
+  }
+  .watermark img { width: 100%; height: 100%; object-fit: contain; }
+
+  header {
+    display: flex; align-items: center; gap: 6mm;
+    padding: 6mm 16mm 4.5mm;
+    border-bottom: 0.7mm solid var(--gold);
+  }
+  header img { width: 22mm; height: 22mm; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+  header .brand { display: flex; flex-direction: column; gap: 1.5mm; }
+  header .name { font-weight: 700; font-size: 28pt; line-height: 1.05; color: var(--navy); }
+  header .tag { font-size: 9pt; letter-spacing: .22em; text-transform: uppercase; color: var(--sand); }
+
+  main { flex: 1; padding: 5mm 16mm 0; position: relative; display: flex; flex-direction: column; }
+
+  .title-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 6mm; }
+  h1 { font-weight: 700; font-size: 24pt; line-height: 1.1; color: var(--gold); }
+  h1 em { font-style: italic; font-weight: 400; color: var(--navy); }
+  .total {
+    flex-shrink: 0; text-align: right;
+    font-size: 8.5pt; letter-spacing: .14em; text-transform: uppercase; color: var(--sand);
+  }
+  .total strong {
+    display: block; margin-top: 1mm; letter-spacing: 0; text-transform: none;
+    font-family: "Playfair Display", Georgia, serif; font-size: 20pt; font-weight: 700; color: var(--navy);
+  }
+  .lead { margin-top: 2mm; font-size: 10pt; line-height: 1.5; }
+
+  /* Cards dos itens (estilo ProductCard do site) */
+  .items { margin-top: 4mm; display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .item {
+    background: #fff;
+    border: 0.3mm solid var(--line);
+    border-radius: 3.5mm;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .item .photo {
+    height: 33mm; background: #FAFAF7;
+    border-bottom: 0.3mm solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .item .photo img { width: 100%; height: 100%; object-fit: contain; padding: 3mm; }
+  .item .photo.placeholder { background: linear-gradient(135deg, var(--cream-1), var(--cream-2)); }
+  .item .photo.placeholder svg { width: 30mm; height: auto; }
+  .item .cat {
+    position: absolute; z-index: 2; top: 2.5mm; left: 2.5mm;
+    background: rgba(30,61,89,.92); color: #F8F6F1;
+    font-size: 6.5pt; letter-spacing: .12em; text-transform: uppercase;
+    padding: .8mm 2.5mm; border-radius: 999px;
+  }
+  .item .new {
+    position: absolute; z-index: 2; top: 2.5mm; right: 2.5mm;
+    background: var(--gold); color: #fff;
+    font-size: 6.5pt; letter-spacing: .12em; text-transform: uppercase;
+    padding: .8mm 2.5mm; border-radius: 999px;
+  }
+  .item .body { padding: 3mm 4.5mm 3.5mm; display: flex; flex-direction: column; gap: 1mm; flex: 1; }
+  .item h2 { font-family: "Playfair Display", Georgia, serif; font-weight: 700; font-size: 13pt; line-height: 1.2; color: var(--navy); }
+  .item .desc { font-size: 8.5pt; line-height: 1.4; color: var(--muted); }
+  .item .foot { margin-top: auto; padding-top: 1.5mm; display: flex; align-items: flex-end; justify-content: space-between; gap: 2mm; }
+  .item .price { font-size: 7pt; letter-spacing: .12em; text-transform: uppercase; color: var(--sand); }
+  .item .price strong { display: block; margin-top: .3mm; letter-spacing: 0; font-family: "Playfair Display", Georgia, serif; font-size: 14pt; color: var(--navy); }
+  .item .mode {
+    font-size: 7.5pt; color: var(--text); text-align: center; line-height: 1.3;
+    background: #E5DFD4; border: 0.25mm solid var(--gold-soft); border-radius: 2mm; padding: 1mm 2.2mm;
+  }
+
+  /* QR (card "Bolsas" do site) */
+  .qr-card {
+    margin-top: 4mm;
+    display: flex; align-items: center; gap: 7mm;
+    border: 0.35mm solid var(--gold-soft); border-radius: 5mm;
+    background: linear-gradient(135deg, var(--cream-1), var(--cream-2));
+    padding: 3.5mm 7mm;
+  }
+  .qr { flex-shrink: 0; width: 31mm; height: 31mm; background: #fff; padding: 3mm; border-radius: 2.5mm; border: 0.35mm solid var(--line); }
+  .qr img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+  .qr-text .pill {
+    display: inline-block; padding: .8mm 3mm; border-radius: 999px;
+    background: var(--navy); color: #F8F6F1;
+    font-size: 7.5pt; letter-spacing: .16em; text-transform: uppercase;
+  }
+  .qr-text h3 { margin-top: 2mm; font-family: "Playfair Display", Georgia, serif; font-weight: 700; font-size: 16pt; line-height: 1.15; color: var(--navy); }
+  .qr-text p { margin-top: 1.5mm; font-size: 9.5pt; line-height: 1.45; }
+  .qr-text .url { margin-top: 2mm; font-size: 10.5pt; font-weight: 600; color: var(--navy); }
+
+  .thanks { margin-top: auto; padding: 3mm 0 3.5mm; text-align: center; font-size: 9.5pt; line-height: 1.5; }
+  .thanks em { font-family: "Playfair Display", Georgia, serif; color: var(--navy); }
+
+  footer {
+    background: var(--navy); padding: 4mm 16mm;
+    display: flex; flex-direction: column; align-items: center; gap: 1.5mm;
+  }
+  footer img { width: 9mm; height: 11mm; object-fit: contain; filter: brightness(0) invert(1); opacity: .6; }
+  footer .org { font-size: 9pt; letter-spacing: .2em; text-transform: uppercase; color: #9B7B5A; }
+  footer .contact { font-size: 10pt; color: rgba(255,255,255,.7); display: flex; gap: 3mm; }
+  footer .contact .sep { color: rgba(255,255,255,.35); }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="watermark" aria-hidden="true"><img src="../../public/logo-fsspx.png" alt="" /></div>
+
+    <header>
+      <img src="../../public/logo.png" alt="Colégio São José" />
+      <div class="brand">
+        <span class="name serif">Colégio São José</span>
+        <span class="tag">Campanha de doações</span>
+      </div>
+    </header>
+
+    <main>
+      <div class="title-row">
+        <h1 class="serif">Ainda precisamos<br /><em>destes itens</em></h1>
+        <div class="total">Faltam ao todo<strong>R$&nbsp;8.920</strong></div>
+      </div>
+      <p class="lead">
+        Muitos itens já foram doados graças à sua generosidade. Estes são os que ainda faltam.
+        Você pode ajudar com qualquer valor, ou oferecendo o próprio item.
+      </p>
+
+      <section class="items">
+        <article class="item">
+          <div class="photo">
+            <span class="cat">Capela N. Sra. Aparecida</span>
+            <span class="new">Novo</span>
+            <div class="photo placeholder" style="position:absolute;inset:0;border:0">
+              <!-- Ilustração simples de banco de igreja (sem foto cadastrada) -->
+              <svg viewBox="0 0 120 70" fill="none" stroke="#1E3D59" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 8h92v22H14z" fill="#C5A572" fill-opacity=".25" />
+                <path d="M10 38h100v8H10z" fill="#C5A572" fill-opacity=".45" />
+                <path d="M16 30v8M104 30v8M18 46v18M102 46v18M60 46v14" />
+                <path d="M30 14v10M45 14v10M60 14v10M75 14v10M90 14v10" stroke="#B8952E" stroke-width="1.6" />
+              </svg>
+            </div>
+          </div>
+          <div class="body">
+            <h2>Banco para a igreja</h2>
+            <p class="desc">Banco de madeira para os fiéis da capela.</p>
+            <div class="foot">
+              <span class="price">Meta<strong>R$ 1.500</strong></span>
+              <span class="mode">Pix ou<br />o próprio banco</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="item">
+          <div class="photo">
+            <span class="cat">Capela N. Sra. Aparecida</span>
+            <img src="itens/peanhas.jpeg" alt="Peanhas de 50cm" />
+          </div>
+          <div class="body">
+            <h2>2 peanhas de 50 cm</h2>
+            <p class="desc">Duas peanhas de 50 cm com base de 27 × 30 cm.</p>
+            <div class="foot">
+              <span class="price">Meta<strong>R$ 1.420</strong></span>
+              <span class="mode">Doação<br />via Pix</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="item">
+          <div class="photo">
+            <span class="cat">Propriedade</span>
+            <img src="itens/serra.webp" alt="Serra de mesa Bosch GTS 254" />
+          </div>
+          <div class="body">
+            <h2>Serra de mesa Bosch GTS 254</h2>
+            <p class="desc">1800 W, disco de 254 mm, para a marcenaria.</p>
+            <div class="foot">
+              <span class="price">Meta<strong>R$ 2.500</strong></span>
+              <span class="mode">Pix ou<br />o próprio item</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="item">
+          <div class="photo">
+            <span class="cat">Propriedade</span>
+            <img src="itens/tupia.jpg" alt="Tupia Bosch GOF 1600 CE" />
+          </div>
+          <div class="body">
+            <h2>Tupia Bosch GOF 1600 CE</h2>
+            <p class="desc">1,6 kW, para a marcenaria.</p>
+            <div class="foot">
+              <span class="price">Meta<strong>R$ 3.500</strong></span>
+              <span class="mode">Pix ou<br />o próprio item</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="qr-card">
+        <div class="qr"><img src="qrcode.svg" alt="QR Code para ajude-o-colegio-sao-jose.com" /></div>
+        <div class="qr-text">
+          <span class="pill">Doe agora</span>
+          <h3>Escolha um item pelo celular</h3>
+          <p>Aponte a câmera para o QR Code, toque no item e doe por Pix (com o valor que quiser) ou combine a entrega do material.</p>
+          <p class="url">ajude-o-colegio-sao-jose.com</p>
+        </div>
+      </section>
+
+      <p class="thanks">Muito obrigado. Que Deus os abençoe!<br /><em>“Há quem dá liberalmente e se torna mais rico.”</em> — Provérbios 11:24</p>
+    </main>
+
+    <footer>
+      <img src="../../public/logo-fsspx.png" alt="Logo FSSPX" />
+      <span class="org">Fraternidade Sacerdotal São Pio X</span>
+      <span class="contact">
+        <span>colegiosaojose.acipec@gmail.com</span><span class="sep">|</span><span>(11) 91518-1075</span>
+      </span>
+    </footer>
+  </div>
+</body>
+</html>
