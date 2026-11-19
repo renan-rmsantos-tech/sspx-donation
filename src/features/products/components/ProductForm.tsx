@@ -346,7 +346,7 @@ export function ProductForm({ categories, product, imageUrl }: ProductFormProps)
                   </SelectContent>
                 </Select>
                 <FormDescription>
-                  Bolsas de estudo aparecem em uma seção dedicada na página inicial.
+                  Bolsas de estudo não aparecem na página inicial; ficam acessíveis apenas pelo link direto.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
