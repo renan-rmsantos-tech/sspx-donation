@@ -1,9 +1,8 @@
 name: Deploy (DigitalOcean)
 
-# DORMENTE — o GitHub Actions está desabilitado no nível da conta
-# (422 "Actions has been disabled for this user"), então este workflow não
-# dispara. O deploy real é `git push production main` (README.md → Deploy).
-# Mantido no repo para religar quando o suporte do GitHub liberar a conta.
+# O GitHub Actions voltou a rodar neste repositório. O `git push production main`
+# (README.md → Deploy) continua como alternativa; os dois usam o mesmo lock no
+# servidor, então não rodam ao mesmo tempo.
 #
 # Deploy automático: a cada push na main, roda testes/lint e, se passarem,
 # conecta via SSH na Droplet para reconstruir e subir o container.
@@ -41,21 +40,18 @@ jobs:
     name: Deploy na Droplet
     needs: ci
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DROPLET_HOST }}
-          username: ${{ secrets.DROPLET_USER }}
-          key: ${{ secrets.DROPLET_SSH_KEY }}
-          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
-          script_stop: true
-          command_timeout: 20m
-          script: |
-            set -euo pipefail
-            cd ${{ secrets.DEPLOY_PATH }}
-            # Atualiza o código primeiro para que scripts/deploy.sh exista/esteja
-            # na versão nova (bootstrap: o script não pode se auto-baixar).
-            git fetch --prune origin main
-            git reset --hard origin/main
-            DEPLOY_BRANCH=main bash scripts/deploy.sh
+      - name: Deploy pelo ci-gate
+        # A chave só aciona `deploy sspx-donation` no ci-gate do servidor (sem shell);
+        # o passo a passo do deploy está em sspx-school/infra/ci-gate.
+        env:
+          SSH_KEY: ${{ secrets.CI_GATE_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.CI_GATE_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o ServerAliveInterval=30 \
+            renan@64.225.15.219 "deploy sspx-donation"
