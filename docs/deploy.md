@@ -37,30 +37,25 @@ Resend ◀── emails (agradecimento e comunicados)
 A cada push na branch `main` (ou manualmente em **Actions → Deploy (DigitalOcean) → Run workflow**):
 
 1. **CI** (`jobs.ci`): `npm ci` → `npm run lint` → `npm test`. **Lint e testes são gates** — se qualquer um falhar, o deploy não roda.
-2. **Deploy** (`jobs.deploy`): SSH na Droplet → `cd $DEPLOY_PATH` → `git reset --hard origin/main` → `bash scripts/deploy.sh`, que reconstrói a imagem e sobe o serviço:
+2. **Deploy** (`jobs.deploy`): pede `deploy sspx-donation` ao `ci-gate` da Droplet, que roda `git reset --hard origin/main` → `bash scripts/deploy.sh`, que reconstrói a imagem e sobe o serviço:
    `docker compose -f compose.traefik.yaml up -d --build --remove-orphans`.
 
 O `.env` de produção (na raiz do repo clonado na Droplet) é montado como secret `app_env` durante o build (`next build` precisa dele) e injetado via `env_file` no runtime.
 
 ## Secrets do GitHub (Settings → Secrets and variables → Actions)
 
-| Secret            | Descrição                                                        |
-| ----------------- | ---------------------------------------------------------------- |
-| `DROPLET_HOST`    | IP ou hostname da Droplet                                        |
-| `DROPLET_USER`    | Usuário SSH (ex.: `root` ou um usuário deploy)                   |
-| `DROPLET_SSH_KEY` | Chave **privada** SSH (conteúdo completo) com acesso à Droplet   |
-| `DEPLOY_PATH`     | Caminho absoluto do repositório clonado na Droplet               |
-| `DROPLET_SSH_PORT`| Opcional. Porta SSH (default `22`)                               |
+| Secret                | Descrição                                                         |
+| --------------------- | ----------------------------------------------------------------- |
+| `CI_GATE_SSH_KEY`     | Chave **privada** do CI (`ci-gate@sspx-donation/production`)      |
+| `CI_GATE_KNOWN_HOSTS` | Host key da Droplet (`ssh-keyscan -t ed25519 64.225.15.219`)      |
 
-### Gerando a chave SSH de deploy
-
-```bash
-# Na sua máquina:
-ssh-keygen -t ed25519 -C "github-actions-deploy" -f deploy_key -N ""
-# Autorize a pública na Droplet:
-ssh-copy-id -i deploy_key.pub USER@DROPLET_HOST   # ou anexe em ~/.ssh/authorized_keys
-# Cole o conteúdo de deploy_key (privada) no secret DROPLET_SSH_KEY.
-```
+A chave do CI não abre shell: no `~/.ssh/authorized_keys` do `renan` ela fica
+presa ao `ci-gate` (`restrict,command="/home/renan/.ci-gate/ci-gate sspx-donation"`),
+que só aceita `deploy sspx-donation`. O porteiro então roda, no servidor,
+`git fetch` + `git reset --hard origin/main` + `scripts/deploy.sh`, com o mesmo
+lock do `git push production main`. Código e instruções do porteiro:
+`sspx-school/infra/ci-gate/README.md`. Para revogar a chave, apague a linha com
+`ci-gate@sspx-donation/production` do `authorized_keys`.
 
 ## Pré-requisitos na Droplet
 
