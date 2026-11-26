@@ -1,4 +1,4 @@
-import { proto } from '@compozy/proto/vite';
+import { proto } from '@protohq/cli/vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { defineConfig } from 'vite';

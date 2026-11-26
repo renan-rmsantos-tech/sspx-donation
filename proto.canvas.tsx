@@ -1,7 +1,7 @@
 import './src/app/globals.css';
 import './proto/canvas.css';
 
-import type { CanvasProps, FrameProps } from '@compozy/proto';
+import type { CanvasProps, FrameProps } from '@protohq/cli';
 import { AdminShell } from '@/app/admin/(protected)/components/AdminShell';
 import { ServerActionsProvider } from '@/components/server-actions';
 import { Toaster } from '@/components/ui/sonner';

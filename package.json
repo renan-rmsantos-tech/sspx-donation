@@ -63,7 +63,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@compozy/proto": "^0.1.6",
+    "@protohq/cli": "0.3.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

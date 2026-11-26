@@ -1,6 +1,6 @@
 ---
 target: library
-host: vite-app # galeria @compozy/proto ao lado do app Next, com vite.config.ts próprio
+host: vite-app # galeria @protohq/cli ao lado do app Next, com vite.config.ts próprio
 prototypes: "src/**/*.proto.tsx"
 entry: "src/drafts/{slug}/index.proto.tsx"
 providers: proto.canvas.tsx
@@ -12,14 +12,14 @@ output: "docs/design/{slug}/"
 
 # Protótipos
 
-A galeria `@compozy/proto` renderiza as views reais do app com fixtures, um estado
+A galeria `@protohq/cli` renderiza as views reais do app com fixtures, um estado
 por vez, e guarda os comentários de revisão em `proto/review/`. As skills `proto` e
 `proto-apply-comments` descrevem autoria e revisão; ficam em `.agents/skills/` (não
 versionado) com links em `.claude/skills/`. Para instalá-las ou atualizá-las, rode
 `npx proto init --skills`.
 
 ```bash
-npm run proto dev            # galeria em http://127.0.0.1:4480 (render em :4481)
+npm run proto dev            # galeria em http://127.0.0.1:4400/p/<projeto>/
 npm run proto check          # valida meta, guards e compilação; rode antes da revisão
 npm run proto -- screenshot product-detail --state meta-atingida
 ```
