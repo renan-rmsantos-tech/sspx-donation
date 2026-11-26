@@ -1,4 +1,4 @@
-import { defineProtoConfig } from '@compozy/proto/config';
+import { defineProtoConfig } from '@protohq/cli/config';
 
 /** Galeria de protótipos: `npm run proto dev` (veja docs/design/prototyping.md). */
 export default defineProtoConfig({
@@ -11,7 +11,6 @@ export default defineProtoConfig({
     publico: 'Site público',
     painel: 'Painel administrativo',
   },
-  dev: { port: 4480 },
   guards: {
     // Protótipos e drafts renderizam views com fixtures: nunca alcançam banco,
     // sessão, storage, envio de e-mail, server actions nem as APIs de servidor
