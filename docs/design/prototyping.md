@@ -5,7 +5,7 @@ prototypes: "src/**/*.proto.tsx"
 entry: "src/drafts/{slug}/index.proto.tsx"
 providers: proto.canvas.tsx
 dev: npm run proto dev
-preview: "http://127.0.0.1:4481/__proto/render/{slug}?chrome=0"
+preview: "proto url {slug} --bare"
 evidence: "npm run proto -- evidence {slug} --state <id>"
 output: "docs/design/{slug}/"
 ---
